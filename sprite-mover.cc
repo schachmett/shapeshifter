@@ -50,8 +50,9 @@ static void SleepMillis(tmillis_t milli_seconds) {
 }
 
 struct SpriteMoverOptions {
-  SpriteMoverOptions() : frame_time_ms(10) {}
+  SpriteMoverOptions() : frame_time_ms(10), verbosity(0) {}
   tmillis_t frame_time_ms;
+  uint verbosity;
 };
 
 
@@ -101,59 +102,120 @@ enum Command {
   NO_COMMAND,
 
   ADD_SPRITE,
-  DELETE_SPRITE,
+  REMOVE_SPRITE,
 
-  INCREASE_SPEED,
-  INCREASE_DIRECTION
+  SET,
+  ADD,
+  TARGET
 };
 struct Message {
-  Message() : command(NO_COMMAND), command_string(""), id(""), arg(0),
-              filename("") {};
+  Message() : command(NO_COMMAND), command_string(""), id(""), filename(""),
+              position(0, 0), speed(nan("")), direction(nan("")), rotation(0),
+              duration(0) {};
   void print() {
     fprintf(stderr, "Command %s:\n"
             "\tID=%s,\n"
             "\tfilename=%s,\n"
-            "\targ=%f\n",
-            command_string.c_str(), id.c_str(), filename.c_str(), arg);
-  }
+            "\tposition=(%f, %f)"
+            "\tspeed=%f, direction=%f, rotation=%f\n"
+            "\tduration=%llu\n",
+            command_string.c_str(), id.c_str(), filename.c_str(),
+            position.x, position.y, speed, direction, rotation, duration);
+  } //TODO handle nan!
   Command command;
   std::string command_string;
   spriteID id;
-  double arg;
   std::string filename;
+  Point position;
+  double speed;
+  double direction;
+  double rotation;
+  tmillis_t duration;
 };
 Command resolveCommand(std::string str) {
   if (str == "") return NO_COMMAND;
-  if (str == "addSpeed") return INCREASE_SPEED;
   if (str == "addSprite") return ADD_SPRITE;
+  if (str == "removeSprite") return REMOVE_SPRITE;
+  if (str == "set") return SET;
+  if (str == "add") return ADD;
+  if (str == "target") return TARGET;
   fprintf(stderr, "UnkownCommand: %s\n", str.c_str());
   return UNKNOWN_COMMAND;
 }
 
-int applyCommand(Message * msg, SpriteList * sprites) {
-  msg->print();
+int applyCommand(Message *msg, SpriteList *sprites) {
   switch (msg->command) {
-    case INCREASE_SPEED : {
-      std::lock_guard<std::mutex> guard(sprites_mutex);
+    case ADD : {
       if (msg->id == "") {
+        std::lock_guard<std::mutex> guard(sprites_mutex);
         for (auto& sprite_pair : *sprites) {
           Sprite * sprite = sprite_pair.second;
-          sprite->addSpeed(msg->arg);
+          if (!std::isnan(msg->speed)) sprite->addSpeed(msg->speed);
+          if (!std::isnan(msg->direction)) sprite->addDirection(msg->direction);
+          if (!std::isnan(msg->position.x)) sprite->addPosition(msg->position);
         }
       } else {
         auto sprite_pair = sprites->find(msg->id);
         if (sprite_pair == sprites->end()) return 1;
         Sprite * sprite = sprite_pair->second;
-        sprite->addSpeed(msg->arg);
+        std::lock_guard<std::mutex> guard(sprites_mutex);
+        if (!std::isnan(msg->speed)) sprite->addSpeed(msg->speed);
+        if (!std::isnan(msg->direction)) sprite->addDirection(msg->direction);
+        if (!std::isnan(msg->position.x)) sprite->addPosition(msg->position);
+      }
+      break;
+    }
+    case SET : {
+      if (msg->id == "") {
+        std::lock_guard<std::mutex> guard(sprites_mutex);
+        for (auto& sprite_pair : *sprites) {
+          Sprite * sprite = sprite_pair.second;
+          if (!std::isnan(msg->speed)) sprite->setSpeed(msg->speed);
+          if (!std::isnan(msg->direction)) sprite->setDirection(msg->direction);
+          if (!std::isnan(msg->position.x)) sprite->setPosition(msg->position);
+        }
+      } else {
+        auto sprite_pair = sprites->find(msg->id);
+        if (sprite_pair == sprites->end()) return 1;
+        Sprite * sprite = sprite_pair->second;
+        std::lock_guard<std::mutex> guard(sprites_mutex);
+        if (!std::isnan(msg->speed)) sprite->setSpeed(msg->speed);
+        if (!std::isnan(msg->direction)) sprite->setDirection(msg->direction);
+        if (!std::isnan(msg->position.x)) sprite->setPosition(msg->position);
+      }
+      break;
+    }
+    case TARGET : {
+      if (msg->id == "") {
+        std::lock_guard<std::mutex> guard(sprites_mutex);
+        for (auto& sprite_pair : *sprites) {
+          Sprite * sprite = sprite_pair.second;
+          // ...
+        }
+      } else {
+        auto sprite_pair = sprites->find(msg->id);
+        if (sprite_pair == sprites->end()) return 1;
+        Sprite * sprite = sprite_pair->second;
+        std::lock_guard<std::mutex> guard(sprites_mutex);
+        // ...
       }
       break;
     }
     case ADD_SPRITE : {
       if (msg->filename == "") break;
       if (msg->id == "") break;
-      Sprite * img = new Sprite(msg->filename.c_str());
+      Sprite * sprite = new Sprite(msg->filename.c_str());
       std::lock_guard<std::mutex> guard(sprites_mutex);
-      (*sprites)[msg->id] = img;
+      (*sprites)[msg->id] = sprite;
+      if (!std::isnan(msg->speed)) sprite->setSpeed(msg->speed);
+      if (!std::isnan(msg->direction)) sprite->setDirection(msg->direction);
+      if (!std::isnan(msg->position.x)) sprite->setPosition(msg->position);
+      break;
+    }
+    case REMOVE_SPRITE : {
+      if (sprites->find(msg->id) == sprites->end()) return 1;
+      std::lock_guard<std::mutex> guard(sprites_mutex);
+      sprites->erase(msg->id);
       break;
     }
     case NO_COMMAND : {
@@ -164,7 +226,6 @@ int applyCommand(Message * msg, SpriteList * sprites) {
       // ...
     }
   }
-  delete msg;
   return 0;
 }
 
@@ -180,12 +241,8 @@ Message * parseJSON(char * buffer) {
   }
   if (doc.HasMember("command") && doc["command"].IsString()) {
     std::string command_string = doc["command"].GetString();
-    Command command = resolveCommand(command_string);
-    msg->command = command;
     msg->command_string = command_string;
-  }
-  if (doc.HasMember("argument") && doc["argument"].IsNumber()) {
-    msg->arg = doc["argument"].GetDouble();
+    msg->command = resolveCommand(command_string);
   }
   if (doc.HasMember("ID") && doc["ID"].IsString()) {
     msg->id = doc["ID"].GetString();
@@ -193,10 +250,30 @@ Message * parseJSON(char * buffer) {
   if (doc.HasMember("filename") && doc["filename"].IsString()) {
     msg->filename = doc["filename"].GetString();
   }
+  if (doc.HasMember("position") && doc["position"].IsObject()
+      && doc["position"].HasMember("x") && doc["position"]["x"].IsNumber()
+      && doc["position"].HasMember("y") && doc["position"]["y"].IsNumber()) {
+    double x = doc["position"]["x"].GetDouble();
+    double y = doc["position"]["y"].GetDouble();
+    msg->position = Point(x, y);
+  }
+  if (doc.HasMember("speed") && doc["speed"].IsNumber()) {
+    msg->speed = doc["speed"].GetDouble();
+  }
+  if (doc.HasMember("direction") && doc["direction"].IsNumber()) {
+    msg->direction = doc["direction"].GetDouble();
+  }
+  if (doc.HasMember("rotation") && doc["rotation"].IsNumber()) {
+    msg->rotation = doc["rotation"].GetDouble();
+  }
+  if (doc.HasMember("duration") && doc["duration"].IsUint()) {
+    msg->duration = doc["duration"].GetUint();
+  }
   return msg;
 }
 
-void listenFIFO(char const * fifo_path, SpriteList *sprites) {
+void listenFIFO(char const * fifo_path, SpriteList *sprites,
+                SpriteMoverOptions *options) {
   struct pollfd pollfd;
   pollfd.fd = open(fifo_path, O_RDONLY|O_NONBLOCK);
   pollfd.events = POLLIN;
@@ -210,7 +287,15 @@ void listenFIFO(char const * fifo_path, SpriteList *sprites) {
     if (pollfd.revents & POLLIN) {
       read(pollfd.fd, &buffer, sizeof(buffer));
       Message * msg = parseJSON(buffer);
-      applyCommand(msg, sprites);
+      if (options->verbosity > 4) {
+        msg->print();
+      }
+      msg->duration /= options->frame_time_ms;
+      if (!applyCommand(msg, sprites) == 0) {
+        fprintf(stderr, "Command failed:\n");
+        msg->print();
+      }
+      delete msg;
     }
   }
   close(pollfd.fd);
@@ -251,7 +336,7 @@ int main(int argc, char *argv[]) {
   FrameCanvas *offscreen_canvas = matrix->CreateFrameCanvas();
 
   // Create sprites
-  SpriteList sprites = createSprites();
+  SpriteList sprites; // = createSprites();
 
   // Open FIFO
   char const * fifo_path = "/tmp/led-fifo";   // user daemon needs access
@@ -268,7 +353,8 @@ int main(int argc, char *argv[]) {
   std::thread animation_loop(runAnimation,
                              matrix, offscreen_canvas, &sprites,
                              &spritemover_options);
-  std::thread fifo_loop(listenFIFO, fifo_path, &sprites);
+  std::thread fifo_loop(listenFIFO,
+                        fifo_path, &sprites, &spritemover_options);
   // runAnimation(matrix, offscreen_canvas, &sprites, &spritemover_options);
   animation_loop.join();
   fifo_loop.join();
@@ -330,10 +416,13 @@ static int usage(const char *progname, const char *msg) {
 
 bool parseOptions(int argc, char *argv[], SpriteMoverOptions *options) {
   int opt;
-  while ((opt = getopt(argc, argv, "f:")) != -1) {
+  while ((opt = getopt(argc, argv, "f:v:")) != -1) {
     switch (opt) {
       case 'f':
         options->frame_time_ms = strtoul(optarg, NULL, 0);
+        break;
+      case 'v':
+        options->verbosity = 5;
         break;
       default:
         return false;
