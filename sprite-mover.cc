@@ -58,15 +58,19 @@ struct SpriteMoverOptions {
 
 std::mutex sprites_mutex;
 
-void drawSprite(FrameCanvas *canvas, Sprite *img) {
-  int x0 = std::round(img->getPosition()->x);
-  int y0 = std::round(img->getPosition()->y);
-  for (size_t img_y = 0; img_y < img->height(); ++img_y) {
-    for (size_t img_x = 0; img_x < img->width(); ++img_x) {
-      const int x = img_x + x0;
-      const int y = img_y + y0;
-      Pixel * p = img->getPixel(img_x, img_y);
+void drawSprite(FrameCanvas *canvas, Sprite *sprite) {
+  int x0 = std::round(sprite->getPosition()->x);
+  int y0 = std::round(sprite->getPosition()->y);
+  for (size_t img_y = 0; img_y < sprite->height(); ++img_y) {
+    for (size_t img_x = 0; img_x < sprite->width(); ++img_x) {
+      Pixel * p = sprite->getPixel(img_x, img_y);
       if (p->red == 0 and p->green == 0 and p->blue == 0) continue;
+      int x = img_x + x0;
+      int y = img_y + y0;
+      if (sprite->getEdgeBehavior() == Sprites::LOOP_DIRECT) {
+        if (x > canvas->width()) x -= canvas->width();
+        if (y > canvas->height()) y -= canvas->height();
+      }
       canvas->SetPixel(x, y, p->red, p->green, p->blue);
     }
   }
@@ -100,10 +104,8 @@ enum Command {
   INVALID_COMMAND,
   UNKNOWN_COMMAND,
   NO_COMMAND,
-
   ADD_SPRITE,
   REMOVE_SPRITE,
-
   SET,
   ADD,
   TARGET
@@ -111,7 +113,7 @@ enum Command {
 struct Message {
   Message() : command(NO_COMMAND), command_string(""), id(""), filename(""),
               position(0, 0), speed(nan("")), direction(nan("")), rotation(0),
-              duration(0) {};
+              duration(0), edge_behavior(Sprite::UNDEFINED_EDGE_BEHAVIOR) {};
   void print() {
     fprintf(stderr, "Command %s:\n"
             "\tID=%s,\n"
@@ -131,6 +133,7 @@ struct Message {
   double direction;
   double rotation;
   tmillis_t duration;
+  Sprite::EdgeBehavior edge_behavior;
 };
 Command resolveCommand(std::string str) {
   if (str == "") return NO_COMMAND;
@@ -141,6 +144,13 @@ Command resolveCommand(std::string str) {
   if (str == "target") return TARGET;
   fprintf(stderr, "UnkownCommand: %s\n", str.c_str());
   return UNKNOWN_COMMAND;
+}
+Sprite::EdgeBehavior resolveEdgeBehavior(std::string str) {
+  if (str == "") return Sprite::UNDEFINED_EDGE_BEHAVIOR;
+  if (str == "loop" || str == "loop_indirect") return Sprite::LOOP_INDIRECT;
+  if (str == "loop_direct") return Sprite::LOOP_DIRECT;
+  if (str == "bounce") return Sprite::BOUNCE;
+  if (str == "stop") return Sprite::STOP;
 }
 
 int applyCommand(Message *msg, SpriteList *sprites) {
@@ -173,6 +183,9 @@ int applyCommand(Message *msg, SpriteList *sprites) {
           if (!std::isnan(msg->speed)) sprite->setSpeed(msg->speed);
           if (!std::isnan(msg->direction)) sprite->setDirection(msg->direction);
           if (!std::isnan(msg->position.x)) sprite->setPosition(msg->position);
+          if (msg->edge_behavior != Sprite::UNDEFINED_EDGE_BEHAVIOR) {
+            sprite->setEdgeBehavior(msg->edge_behavior);
+          }
         }
       } else {
         auto sprite_pair = sprites->find(msg->id);
@@ -182,6 +195,9 @@ int applyCommand(Message *msg, SpriteList *sprites) {
         if (!std::isnan(msg->speed)) sprite->setSpeed(msg->speed);
         if (!std::isnan(msg->direction)) sprite->setDirection(msg->direction);
         if (!std::isnan(msg->position.x)) sprite->setPosition(msg->position);
+        if (msg->edge_behavior != Sprite::UNDEFINED_EDGE_BEHAVIOR) {
+          sprite->setEdgeBehavior(msg->edge_behavior);
+        }
       }
       break;
     }
@@ -210,6 +226,9 @@ int applyCommand(Message *msg, SpriteList *sprites) {
       if (!std::isnan(msg->speed)) sprite->setSpeed(msg->speed);
       if (!std::isnan(msg->direction)) sprite->setDirection(msg->direction);
       if (!std::isnan(msg->position.x)) sprite->setPosition(msg->position);
+      if (msg->edge_behavior != Sprite::UNDEFINED_EDGE_BEHAVIOR) {
+        sprite->setEdgeBehavior(msg->edge_behavior);
+      }
       break;
     }
     case REMOVE_SPRITE : {
@@ -268,6 +287,10 @@ Message * parseJSON(char * buffer) {
   }
   if (doc.HasMember("duration") && doc["duration"].IsUint()) {
     msg->duration = doc["duration"].GetUint();
+  }
+  if (doc.HasMember("edge_behavior") && doc["edge_behavior"].IsString()) {
+    edge_behavior_string = doc["edge_behavior"].GetString();
+    msg->edge_behavior = resolveEdgeBehavior(edge_behavior_string);
   }
   return msg;
 }
@@ -364,42 +387,6 @@ int main(int argc, char *argv[]) {
   matrix->Clear();
   delete matrix;
   return 0;
-}
-
-SpriteList createSprites() {
-  char const *filename = "sprites/clubs/bremen42.png";
-  Sprite * img = new Sprite(filename);
-  img->setDirection(30.0);
-  img->setSpeed(0.3);
-  Sprite * img2 = new Sprite("sprites/clubs/dortmund42.png");
-  img2->setDirection(80.0);
-  img2->setSpeed(0.5);
-  img2->setPosition(Point(50, 2));
-  Sprite * img3 = new Sprite("sprites/clubs/mainz42.png");
-  img3->setDirection(170.0);
-  img3->setSpeed(0.9);
-  img3->setPosition(Point(170, 55));
-  Sprite * img4 = new Sprite("sprites/clubs/koeln42.png");
-  img4->setDirection(240.0);
-  img4->setSpeed(0.2);
-  img4->setPosition(Point(80, 12));
-  Sprite * img5 = new Sprite("sprites/clubs/leverkusen42.png");
-  img5->setDirection(0.0);
-  img5->setSpeed(3);
-  img5->setPosition(Point(80, 12));
-
-  SpriteList sprites;
-  sprites["bremen"] = img;
-  sprites["dortmund"] = img2;
-  sprites["mainz"] = img3;
-  sprites["koeln"] = img4;
-  sprites["leverkusen"] = img5;
-  // sprites.push_back(img);
-  // sprites.push_back(img2);
-  // sprites.push_back(img3);
-  // sprites.push_back(img4);
-  // sprites.push_back(img5);
-  return sprites;
 }
 
 static int usage(const char *progname, const char *msg) {
