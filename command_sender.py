@@ -8,16 +8,15 @@ import json
 FIFO_PATH = "/tmp/led-fifo"
 
 def main():
-    start_position = {"x": 81, "y":16}
+    start_position = {"x": 5, "y" : 40}
+    end_position = {"x": 150, "y": 3}
     add_sprite("bremen", "sprites/clubs/bremen42.png", position=start_position,
-               speed=0.2)
-    time.sleep(0.1)
-    for _ in range(50):
-        # send_dict(ID="bremen", command="add", speed=0.5)
-        send_dict(ID="bremen", command="add", direction=5)
-        time.sleep(0.1)
+               speed=0)
+    time.sleep(3)
+    send_dict(ID="bremen", command="target", position=end_position,
+              duration=3000)
+    time.sleep(5)
     send_dict(ID="bremen", command="removeSprite")
-    send_dict(ID="bremen", command="add", direction=5)
 
 
 def send_dict(**kwargs):

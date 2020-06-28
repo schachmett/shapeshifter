@@ -19,12 +19,13 @@ struct PanelSize {
 };
 
 enum EdgeBehavior {
-  UNDEFINED_EDGE_BEHAVIOR;
-  LOOP_DIRECT;
-  LOOP_INDIRECT;
-  BOUNCE;
-  STOP;
-}
+  UNDEFINED_EDGE_BEHAVIOR,
+  LOOP_DIRECT,
+  LOOP_INDIRECT,
+  BOUNCE,
+  STOP,
+  DISAPPEAR
+};
 
 struct Pixel {
   Pixel() : red(0), green(0), blue(0) {};
@@ -34,6 +35,7 @@ struct Pixel {
   char green;
   char blue;
 };
+Pixel empty_pixel = {0, 0, 0};
 struct Point {
   Point() : x(0), y(0) {};
   Point(double x_, double y_) : x(x_), y(y_) {};
@@ -92,57 +94,62 @@ class Sprite {
 public:
   Sprite() : matrix_(), position_(), direction_(0), speed_(0),
              max_dimensions_(), width_(0), height_(0),
-             edge_behavior_(LOOP_INDIRECT) {};
+             edge_behavior_(LOOP_INDIRECT), invisible_(false), wrap_(false),
+             position_goal_(nan(""), nan("")), goal_steps_(-1) {};
   Sprite(const char *filename) : matrix_(), position_(), direction_(0),
                                  speed_(0), max_dimensions_(), width_(0),
-                                 height_(0), edge_behavior_(LOOP_INDIRECT) {
+                                 height_(0), edge_behavior_(LOOP_INDIRECT),
+                                 invisible_(false), wrap_(false),
+                                 position_goal_(nan(""), nan("")),
+                                 goal_steps_(-1) {
     loadMatrix(filename);
   };
 
   void doStep() {
-    direction_ = (direction_ + 360) % 360;
+    direction_ = std::fmod(direction_ + 360, 360);
     double x = position_.x + cos(direction_ * M_PI / 180) * speed_;
     double y = position_.y + sin(direction_ * M_PI / 180) * speed_;
+    invisible_ = false;
+    wrap_ = false;
+    position_ = wrap_edge(x, y);
+    if (goal_steps_ == 0) speed_ = 0;
+    if (goal_steps_ >= 0) --goal_steps_;
+  }
+
+  Point wrap_edge(double x, double y) {
+    size_t xmax = max_dimensions_.x;
+    size_t ymax = max_dimensions_.y;
 
     if (edge_behavior_ == LOOP_INDIRECT) {
-      if (x + width_ < 0) {
-        x += max_dimensions_.x + width_;
-      } else if (std::round(x) > max_dimensions_.x) {
-        x -= max_dimensions_.x + width_;
-      }
-      if (y + height_ < 0) {
-        y += max_dimensions_.y + height_;
-      } else if (std::round(y) > max_dimensions_.y) {
-        y -= max_dimensions_.y + height_;
-      }
+      if (x + width_ < 0) x += xmax + width_;
+      if (std::round(x) > xmax) x -= xmax + width_;
+      if (y + height_ < 0) y += ymax + height_;
+      if (std::round(y) > ymax) y -= ymax + height_;
     } else if (edge_behavior_ == LOOP_DIRECT) {
-      if (x < 0) {
-        x += max_dimensions_.x;
-      } else if (std::round(x) > max_dimensions_.x) {
-        x -= max_dimensions_.x;
-      }
-      if (y < 0) {
-        y += max_dimensions_.y
-      } else if (std::round(y) > max_dimensions_.y) {
-        y -= max_dimensions_.y
-      }
+      if (x < 0) x += xmax;
+      if (std::round(x) > xmax) x -= xmax;
+      if (y < 0) y += ymax;
+      if (std::round(y) > ymax)  y -= ymax;
+      wrap_ = true;
     } else if (edge_behavior_ == BOUNCE) {
-      if (x < 0 || x + width_ > max_dimensions_.x) {
-        setDirection(180 - direction_);
-      }
-      if (y < 0 || y + height_ > max_dimensions_.y) {
-        setDirection(360 - direction_);
-      }
+      if (x < 0 || x + width_ > xmax) setDirection(180 - direction_);
+      if (y < 0 || y + height_ > ymax)  setDirection(360 - direction_);
     } else if (edge_behavior_ == STOP) {
-      if ((x < 0 && (direction_ + 270) % 360 < 180)
-          || (x + width_ > max_dimensions_.x && (direction_ + 90) % 360 < 180)
-          || (y < 0 && (direction_ + 180) % 360 < 180)
-          || (y + height_ > max_dimensions_.y && direction_ < 180)) {
+      if ((x < 0 && std::fmod(direction_ + 270, 360) < 180)
+          || (x + width_ > xmax && std::fmod(direction_ + 90, 360) < 180)
+          || (y < 0 && std::fmod(direction_ + 180, 360) < 180)
+          || (y + height_ > ymax && direction_ < 180)) {
         speed_ = 0;
       }
+    } else if (edge_behavior_ == DISAPPEAR) {
+      if (x + width_ < 0 || std::round(x) > xmax
+          || y + height_ < 0 || std::round(y) > ymax) {
+        invisible_ = true;
+      } else {
+        invisible_ = false;
+      }
     }
-    position_.x = x;
-    position_.y = y;
+    return Point(x, y);
   }
 
   void loadMatrix(PixelMatrix mat) {
@@ -162,20 +169,26 @@ public:
     height_ = matrix_.size();
     height_ < 1 ? width_ = 0 : width_ = matrix_[0].size();
   }
+
   size_t height() {
     return height_;
   }
   size_t width() {
     return width_;
   }
+
   void setPixel(int x, int y, Pixel * pixel);
   void setPixel(int x, int y, char r, char g, char b);
   Pixel * getPixel(int x, int y) {
-    if (height() < (size_t) y) return new Pixel();
-    if (width() < (size_t) x) return new Pixel();
+    if (invisible_) return &empty_pixel;
+    if (x < 0) return &empty_pixel;
+    if (y < 0) return &empty_pixel;
+    if ((size_t) x > width_) return &empty_pixel;
+    if ((size_t) y > height_) return &empty_pixel;
     Pixel * pixel = &matrix_[y][x];
     return pixel;
   }
+
   void setPosition(Point p) {
     position_ = p;
   }
@@ -183,9 +196,20 @@ public:
     position_.x += p.x;
     position_.y += p.y;
   }
+  void reachPosition(Point p, uint steps) {
+    position_goal_ = p;
+    goal_steps_ = steps;
+    double dx = position_goal_.x - position_.x;
+    double dy = position_goal_.y - position_.y;
+    double distance = sqrt(pow(dx, 2) + pow(dy, 2));
+    double direction = atan2(dy, dx) * 180 / M_PI;
+    setDirection(direction);
+    setSpeed(distance / goal_steps_);
+  }
   Point * getPosition() {
     return &position_;
   }
+
   void setDirection(double ang) {
     direction_ = ang;
   }
@@ -206,6 +230,7 @@ public:
   double * getDirection() {
     return &direction_;
   }
+
   void setSpeed(double speed) {
     speed_ = speed;
   }
@@ -215,11 +240,16 @@ public:
   double * getSpeed() {
     return &speed_;
   }
+
   EdgeBehavior getEdgeBehavior() {
     return edge_behavior_;
   }
   void setEdgeBehavior(EdgeBehavior edge_behavior) {
     edge_behavior_ = edge_behavior;
+  }
+
+  bool isWrapped() {
+    return wrap_;
   }
 
   void flip();
@@ -234,6 +264,10 @@ private:
   size_t width_;
   size_t height_;
   EdgeBehavior edge_behavior_;
+  bool invisible_;
+  bool wrap_;
+  Point position_goal_;
+  int goal_steps_;
 };
 
 typedef std::map<spriteID, Sprite*> SpriteList;

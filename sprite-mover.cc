@@ -67,7 +67,7 @@ void drawSprite(FrameCanvas *canvas, Sprite *sprite) {
       if (p->red == 0 and p->green == 0 and p->blue == 0) continue;
       int x = img_x + x0;
       int y = img_y + y0;
-      if (sprite->getEdgeBehavior() == Sprites::LOOP_DIRECT) {
+      if (sprite->isWrapped()) {
         if (x > canvas->width()) x -= canvas->width();
         if (y > canvas->height()) y -= canvas->height();
       }
@@ -112,18 +112,21 @@ enum Command {
 };
 struct Message {
   Message() : command(NO_COMMAND), command_string(""), id(""), filename(""),
-              position(0, 0), speed(nan("")), direction(nan("")), rotation(0),
-              duration(0), edge_behavior(Sprite::UNDEFINED_EDGE_BEHAVIOR) {};
+              position(nan(""), nan("")), speed(nan("")), direction(nan("")),
+              rotation(0), duration(0),
+              edge_behavior(Sprites::UNDEFINED_EDGE_BEHAVIOR) {};
   void print() {
     fprintf(stderr, "Command %s:\n"
-            "\tID=%s,\n"
-            "\tfilename=%s,\n"
-            "\tposition=(%f, %f)"
-            "\tspeed=%f, direction=%f, rotation=%f\n"
-            "\tduration=%llu\n",
+            "\tID = %s,\n"
+            "\tfilename = %s,\n"
+            "\tposition = (%f, %f)"
+            "\tspeed = %.2f, direction = %.2f, rotation = %.2f\n"
+            "\tduration = %llu\n"
+            "\tedge behavior = %d\n",
             command_string.c_str(), id.c_str(), filename.c_str(),
-            position.x, position.y, speed, direction, rotation, duration);
-  } //TODO handle nan!
+            position.x, position.y, speed, direction, rotation, duration,
+            edge_behavior);
+  }
   Command command;
   std::string command_string;
   spriteID id;
@@ -133,7 +136,7 @@ struct Message {
   double direction;
   double rotation;
   tmillis_t duration;
-  Sprite::EdgeBehavior edge_behavior;
+  Sprites::EdgeBehavior edge_behavior;
 };
 Command resolveCommand(std::string str) {
   if (str == "") return NO_COMMAND;
@@ -145,12 +148,13 @@ Command resolveCommand(std::string str) {
   fprintf(stderr, "UnkownCommand: %s\n", str.c_str());
   return UNKNOWN_COMMAND;
 }
-Sprite::EdgeBehavior resolveEdgeBehavior(std::string str) {
-  if (str == "") return Sprite::UNDEFINED_EDGE_BEHAVIOR;
-  if (str == "loop" || str == "loop_indirect") return Sprite::LOOP_INDIRECT;
-  if (str == "loop_direct") return Sprite::LOOP_DIRECT;
-  if (str == "bounce") return Sprite::BOUNCE;
-  if (str == "stop") return Sprite::STOP;
+Sprites::EdgeBehavior resolveEdgeBehavior(std::string str) {
+  if (str == "loop" || str == "loop_indirect") return Sprites::LOOP_INDIRECT;
+  if (str == "loop_direct") return Sprites::LOOP_DIRECT;
+  if (str == "bounce") return Sprites::BOUNCE;
+  if (str == "stop") return Sprites::STOP;
+  if (str == "disappear") return Sprites::DISAPPEAR;
+  return Sprites::UNDEFINED_EDGE_BEHAVIOR;
 }
 
 int applyCommand(Message *msg, SpriteList *sprites) {
@@ -183,7 +187,7 @@ int applyCommand(Message *msg, SpriteList *sprites) {
           if (!std::isnan(msg->speed)) sprite->setSpeed(msg->speed);
           if (!std::isnan(msg->direction)) sprite->setDirection(msg->direction);
           if (!std::isnan(msg->position.x)) sprite->setPosition(msg->position);
-          if (msg->edge_behavior != Sprite::UNDEFINED_EDGE_BEHAVIOR) {
+          if (msg->edge_behavior != Sprites::UNDEFINED_EDGE_BEHAVIOR) {
             sprite->setEdgeBehavior(msg->edge_behavior);
           }
         }
@@ -195,25 +199,30 @@ int applyCommand(Message *msg, SpriteList *sprites) {
         if (!std::isnan(msg->speed)) sprite->setSpeed(msg->speed);
         if (!std::isnan(msg->direction)) sprite->setDirection(msg->direction);
         if (!std::isnan(msg->position.x)) sprite->setPosition(msg->position);
-        if (msg->edge_behavior != Sprite::UNDEFINED_EDGE_BEHAVIOR) {
+        if (msg->edge_behavior != Sprites::UNDEFINED_EDGE_BEHAVIOR) {
           sprite->setEdgeBehavior(msg->edge_behavior);
         }
       }
       break;
     }
     case TARGET : {
+      if (std::isnan(msg->duration)) return 1;
       if (msg->id == "") {
         std::lock_guard<std::mutex> guard(sprites_mutex);
         for (auto& sprite_pair : *sprites) {
           Sprite * sprite = sprite_pair.second;
-          // ...
+          if (!std::isnan(msg->position.x)) {
+            sprite->reachPosition(msg->position, msg->duration);
+          }
         }
       } else {
         auto sprite_pair = sprites->find(msg->id);
         if (sprite_pair == sprites->end()) return 1;
         Sprite * sprite = sprite_pair->second;
         std::lock_guard<std::mutex> guard(sprites_mutex);
-        // ...
+        if (!std::isnan(msg->position.x)) {
+          sprite->reachPosition(msg->position, msg->duration);
+        }
       }
       break;
     }
@@ -226,7 +235,7 @@ int applyCommand(Message *msg, SpriteList *sprites) {
       if (!std::isnan(msg->speed)) sprite->setSpeed(msg->speed);
       if (!std::isnan(msg->direction)) sprite->setDirection(msg->direction);
       if (!std::isnan(msg->position.x)) sprite->setPosition(msg->position);
-      if (msg->edge_behavior != Sprite::UNDEFINED_EDGE_BEHAVIOR) {
+      if (msg->edge_behavior != Sprites::UNDEFINED_EDGE_BEHAVIOR) {
         sprite->setEdgeBehavior(msg->edge_behavior);
       }
       break;
@@ -237,12 +246,9 @@ int applyCommand(Message *msg, SpriteList *sprites) {
       sprites->erase(msg->id);
       break;
     }
-    case NO_COMMAND : {
-      fprintf(stderr, "No command given\n");
-      break;
-    }
     default : {
-      // ...
+      fprintf(stderr, "No valid command given\n");
+      break;
     }
   }
   return 0;
@@ -289,7 +295,7 @@ Message * parseJSON(char * buffer) {
     msg->duration = doc["duration"].GetUint();
   }
   if (doc.HasMember("edge_behavior") && doc["edge_behavior"].IsString()) {
-    edge_behavior_string = doc["edge_behavior"].GetString();
+    std::string edge_behavior_string = doc["edge_behavior"].GetString();
     msg->edge_behavior = resolveEdgeBehavior(edge_behavior_string);
   }
   return msg;
@@ -397,13 +403,13 @@ static int usage(const char *progname, const char *msg) {
   fprintf(stderr, "usage: %s [options] <video> [<video>...]\n", progname);
   fprintf(stderr, "Options:\n"
           "\t-f                 : Frame duration in ms.\n"
-          "\t-x                 : Example option.\n");
+          "\t-v                 : Verbose mode.\n");
   return 1;
 }
 
 bool parseOptions(int argc, char *argv[], SpriteMoverOptions *options) {
   int opt;
-  while ((opt = getopt(argc, argv, "f:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "f:v")) != -1) {
     switch (opt) {
       case 'f':
         options->frame_time_ms = strtoul(optarg, NULL, 0);

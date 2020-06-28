@@ -33,8 +33,11 @@ sprite-mover: sprite-mover.o $(RGB_LIBRARY)
 copy :
 	cp $(BINARIES) $(HOME)/bin
 
+sync-to-pi :
+	rsync -auvhz -e ssh *.cc *.h *.py dietpi@192.168.178.36:/home/dietpi/shapeshifter/
+
 clean:
 	rm -f $(OBJECTS) $(BINARIES)
 
 FORCE:
-.PHONY: FORCE
+.PHONY: FORCE sprite-mover
