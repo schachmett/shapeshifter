@@ -139,6 +139,10 @@ public:
   void setPosition(Point p) {
     position_ = p;
   }
+  void addPosition(Point p) {
+    position_.x += p.x;
+    position_.y += p.y;
+  }
   Point * getPosition() {
     return &position_;
   }
@@ -155,6 +159,9 @@ public:
     } else {
       direction_angle_ = 0;
     }
+  }
+  void addDirection(double ang_inc) {
+    direction_angle_ += ang_inc;
   }
   double * getDirection() {
     return &direction_angle_;
