@@ -1,9 +1,15 @@
 
 #include <cmath>
 #include <vector>
+#include <cstring>
 
 #include <Magick++.h>
 #include <magick/image.h>
+
+
+namespace Sprites {
+
+typedef std::string spriteID;
 
 struct PanelSize {
   PanelSize() : x(192), y(64) {};
@@ -105,13 +111,13 @@ public:
     height_ < 1 ? width_ = 0 : width_ = matrix_[0].size();
   }
   void loadMatrix(const char *filename) {
-    PixelMatrix mat = ::loadMatrix(filename, 1.0);
+    PixelMatrix mat = Sprites::loadMatrix(filename, 1.0);
     matrix_.swap(mat);
     height_ = matrix_.size();
     height_ < 1 ? width_ = 0 : width_ = matrix_[0].size();
   }
   void loadMatrix(const char *filename, double resize_factor) {
-    PixelMatrix mat = ::loadMatrix(filename, resize_factor);
+    PixelMatrix mat = Sprites::loadMatrix(filename, resize_factor);
     matrix_.swap(mat);
     height_ = matrix_.size();
     height_ < 1 ? width_ = 0 : width_ = matrix_[0].size();
@@ -156,9 +162,13 @@ public:
   void setSpeed(double speed) {
     speed_ = speed;
   }
+  void addSpeed(double speed_inc) {
+    speed_ += speed_inc;
+  }
   double * getSpeed() {
     return &speed_;
   }
+
 
   void flip();
   void flop();
@@ -173,4 +183,6 @@ private:
   size_t height_;
 };
 
-typedef std::vector<Sprite*> SpriteList;
+typedef std::map<spriteID, Sprite*> SpriteList;
+
+} // namespace Sprites
