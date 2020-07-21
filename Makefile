@@ -1,7 +1,9 @@
-CFLAGS=-Wall -O3 -g -Wextra -Wno-unused-parameter
+CFLAGS=-Wall -Wextra -Wno-unused-parameter -O3 -g
 CXXFLAGS=$(CFLAGS)
-OBJECTS=sprite-mover.o
-BINARIES=sprite-mover
+
+CYTHONIZE ?= cythonize
+CYTHON ?= cython
+CYTHON_CXXFLAGS=-shared -pthread -fPIC -Wall -O2 -fno-strict-aliasing
 
 # Where our library resides. You mostly only need to change the
 # RGB_LIB_DISTRIBUTION, this is where the library is checked out.
@@ -15,7 +17,11 @@ LDFLAGS+=-L$(RGB_LIBDIR) -l$(RGB_LIBRARY_NAME) -lrt -lm -lpthread
 MAGICK_CXXFLAGS?=$(shell GraphicsMagick++-config --cppflags --cxxflags)
 MAGICK_LDFLAGS?=$(shell GraphicsMagick++-config --ldflags --libs)
 
-RAPIDJSON_LIBRARY=rapidjson/include
+RAPIDJSON_INCDIR=rapidjson/include
+
+
+OBJECTS=sprite.o shapeshifter.o
+BINARIES=shapeshifter
 
 
 all : $(BINARIES)
@@ -24,20 +30,34 @@ $(RGB_LIBRARY): FORCE
 	$(MAKE) -C $(RGB_LIBDIR)
 
 # $ sudo apt install libgraphicsmagick++-dev libwebp-dev
-sprite-mover: sprite-mover.o $(RGB_LIBRARY)
-	$(CXX) $(CXXFLAGS) sprite-mover.o -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
+shapeshifter: $(OBJECTS) $(RGB_LIBRARY)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
 
 %.o : %.cc
-	$(CXX) -I$(RGB_INCDIR) -I$(RAPIDJSON_LIBRARY) $(CXXFLAGS) $(MAGICK_CXXFLAGS) -c -o $@ $<
+	$(CXX) -I$(RGB_INCDIR) -I$(RAPIDJSON_INCDIR) \
+			$(CXXFLAGS) $(MAGICK_CXXFLAGS) \
+			-c -o $@ $<
 
-copy :
-	cp $(BINARIES) $(HOME)/bin
+%.cythonize.so : %.pyx
+	$(CYTHONIZE) -X language_level=3 --inplace $@
+
+%.so : %.cython.cc
+	$(CXX) $(CYTHON_CXXFLAGS) -I/usr/include/python3.6 -o $@ $^
+
+%.cython.cc : %.pyx
+	$(CYTHON) -X language_level=3 --cplus -o $@ $^
 
 sync-to-pi :
-	rsync -auvhz -e ssh *.cc *.h *.py dietpi@192.168.178.36:/home/dietpi/shapeshifter/
+	rsync -auvhz -e ssh *.cc *.h *.py Makefile \
+		dietpi@192.168.178.36:/home/dietpi/shapeshifter/
 
 clean:
 	rm -f $(OBJECTS) $(BINARIES)
+	rm -f *.h.gch
+	rm -rf build
+	rm -rf *.so
+	rm -rf *.cython.cc
 
 FORCE:
-.PHONY: FORCE sprite-mover
+
+.PHONY: FORCE sync-to-pi copy clean
