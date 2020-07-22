@@ -20,34 +20,37 @@ MAGICK_LDFLAGS?=$(shell GraphicsMagick++-config --ldflags --libs)
 RAPIDJSON_INCDIR=rapidjson/include
 
 
-OBJECTS=sprite.o shapeshifter.o
+OBJECTS=sprite.o led-loop.o shapeshifter.o
 BINARIES=shapeshifter
 
 
-all : $(BINARIES)
+all : $(BINARIES) bindings.so
 
-$(RGB_LIBRARY): FORCE
+$(RGB_LIBRARY): #FORCE				# beware!
 	$(MAKE) -C $(RGB_LIBDIR)
 
 # $ sudo apt install libgraphicsmagick++-dev libwebp-dev
 shapeshifter: $(OBJECTS) $(RGB_LIBRARY)
+	@echo "###### Make shapeshifter"
 	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
+	@echo "######"
 
 %.o : %.cc
-	$(CXX) -I$(RGB_INCDIR) -I$(RAPIDJSON_INCDIR) \
-			$(CXXFLAGS) $(MAGICK_CXXFLAGS) \
-			-c -o $@ $<
+	@echo "###### Make object file $@"
+	$(CXX) $(CXXFLAGS) -I$(RGB_INCDIR) -I$(RAPIDJSON_INCDIR) $(MAGICK_CXXFLAGS) -c -o $@ $<
+	@echo "######"
 
 %.cythonize.so : %.pyx
 	$(CYTHONIZE) -X language_level=3 --inplace $@
 
 %.so : %.cython.cc
-	$(CXX) $(CYTHON_CXXFLAGS) -I/usr/include/python3.6 -o $@ $^
+	$(CXX) $(CYTHON_CXXFLAGS) $(MAGICK_CXXFLAGS) -I/usr/include/python3.6 -o $@ $^ $(MAGICK_LDFLAGS)
 
 %.cython.cc : %.pyx
 	$(CYTHON) -X language_level=3 --cplus -o $@ $^
 
 sync-to-pi :
+	@echo "Syncing to Raspberry Pi"
 	rsync -auvhz -e ssh *.cc *.h *.py Makefile \
 		dietpi@192.168.178.36:/home/dietpi/shapeshifter/
 

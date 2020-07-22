@@ -7,7 +7,6 @@
 #include <magick/image.h>
 
 namespace Sprites {
-  typedef std::string SpriteID;
 
   enum EdgeBehavior {
     UNDEFINED_EDGE_BEHAVIOR,
@@ -31,6 +30,8 @@ namespace Sprites {
   };
   struct Point {
     Point(double x = 0, double y = 0);
+    // int xi();
+    // int yi();
     double x;
     double y;
   };
@@ -45,12 +46,17 @@ namespace Sprites {
   Magick::Image loadImage(const char* filename, const double resize_factor = 1);
   PixelMatrix loadMatrix(const char* filename, const double resize_factor = 1);
 
+  typedef std::string SpriteID;
+
   class Sprite {
     public:
       Sprite();
+      Sprite(SpriteID id);
       Sprite(const char* filename);
+      Sprite(SpriteID id, const char* filename);
       void loadMatrix(const PixelMatrix mat);
       void loadMatrix(const char* filename, double resize_factor = 1.0);
+      SpriteID getID();
       size_t getHeight();
       size_t getWidth();
 
@@ -69,7 +75,7 @@ namespace Sprites {
       void setPosition(const Point p);
       void addToPosition(const Point p);
       void reachPosition(const Point p, const uint steps);
-      Point* getPosition();
+      const Point& getPosition() const;
 
       void setDirection(const double ang);
       void setDirection(const char dir);
@@ -88,6 +94,7 @@ namespace Sprites {
     private:
       Point wrap_edge(double x, double y);
 
+      SpriteID id;
       PixelMatrix matrix;
       size_t width;
       size_t height;
@@ -107,6 +114,6 @@ namespace Sprites {
 
   typedef std::map<SpriteID, Sprite*> SpriteList;
 
-} // namespace Sprites
+} // end namespace Sprites
 
 #endif

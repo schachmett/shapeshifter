@@ -1,3 +1,6 @@
 sprites
+shapeshifter
+*.cython.cc
+*.so
 *.o
-sprite-mover
+*.h.gch
