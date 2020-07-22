@@ -22,11 +22,15 @@ RAPIDJSON_INCDIR=rapidjson/include
 
 OBJECTS=sprite.o led-loop.o shapeshifter.o
 BINARIES=shapeshifter
+BINDINGS=bindings.so
 
 
-all : $(BINARIES) bindings.so
+all : $(BINARIES)
 
-$(RGB_LIBRARY): #FORCE				# beware!
+bindings : $(BINDINGS)
+
+
+$(RGB_LIBRARY): FORCE				# beware!
 	$(MAKE) -C $(RGB_LIBDIR)
 
 # $ sudo apt install libgraphicsmagick++-dev libwebp-dev
