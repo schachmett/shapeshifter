@@ -48,8 +48,8 @@ void SpriteAnimationLoop::prepareFrame() {
 }
 
 void SpriteAnimationLoop::drawSprite(Sprites::Sprite* sprite) {
-  int x0 = std::round(sprite->getPosition()->x);
-  int y0 = std::round(sprite->getPosition()->y);
+  int x0 = std::round(sprite->getPosition().x);
+  int y0 = std::round(sprite->getPosition().y);
   for (size_t img_y = 0; img_y < sprite->getHeight(); ++img_y) {
     for (size_t img_x = 0; img_x < sprite->getWidth(); ++img_x) {
       const Sprites::Pixel* p = sprite->getPixel(img_x, img_y);
