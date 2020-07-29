@@ -1,70 +1,88 @@
-CFLAGS=-Wall -Wextra -Wno-unused-parameter -O3 -g
-CXXFLAGS=$(CFLAGS)
+# CXXFLAGS: $(CXX) compiler flags
+# CPPFLAGS: C Pre Processor path (e.g. for #include)
+# LDFLAGS:	adds to ld's path-list
+# LDLIBS:		-l$(name) searches ld's path-list for lib$(name).a
 
-CYTHONIZE ?= cythonize
-CYTHON ?= cython
-CYTHON_CXXFLAGS=-shared -pthread -fPIC -Wall -O2 -fno-strict-aliasing
-
-# Where our library resides. You mostly only need to change the
-# RGB_LIB_DISTRIBUTION, this is where the library is checked out.
-RGB_LIB_DISTRIBUTION=matrix
-RGB_INCDIR=$(RGB_LIB_DISTRIBUTION)/include
-RGB_LIBDIR=$(RGB_LIB_DISTRIBUTION)/lib
-RGB_LIBRARY_NAME=rgbmatrix
-RGB_LIBRARY=$(RGB_LIBDIR)/lib$(RGB_LIBRARY_NAME).a
-LDFLAGS+=-L$(RGB_LIBDIR) -l$(RGB_LIBRARY_NAME) -lrt -lm -lpthread
-
-MAGICK_CXXFLAGS?=$(shell GraphicsMagick++-config --cppflags --cxxflags)
-MAGICK_LDFLAGS?=$(shell GraphicsMagick++-config --ldflags --libs)
-
-RAPIDJSON_INCDIR=rapidjson/include
+CYTHONIZE   ?=  cythonize
+CYTHON      ?=  cython
 
 
-OBJECTS=sprite.o led-loop.o shapeshifter.o
-BINARIES=shapeshifter
-BINDINGS=bindings.so
+CFLAGS			=		-Wall -Wextra -Wno-unused-parameter -O3 -g
+CXXFLAGS		=		$(CFLAGS)
+CPPFLAGS 		=		-Iinclude
+# rpi-led-rgb-matrix (https://github.com/hzeller/rpi-rgb-led-matrix)
+RGB_DIR     =   matrix
+CPPFLAGS    +=  -I$(RGB_DIR)/include
+LDFLAGS     +=  -L$(RGB_DIR)/lib
+LDLIBS      +=  -lrgbmatrix -lrt -lm -lpthread
+# Magick++ ($ sudo apt install libgraphicsmagick++-dev libwebp-dev)
+CXXFLAGS    +=  $(shell GraphicsMagick++-config --cxxflags)
+CPPFLAGS    +=  $(shell GraphicsMagick++-config --cppflags)
+LDFLAGS     +=  $(shell GraphicsMagick++-config --ldflags)
+LDLIBS      +=  $(shell GraphicsMagick++-config --libs)
+# Cython ($ python3 -m pip install cython)
+CXXFLAGS    +=  -shared -pthread -fPIC -Wall -O2 -fno-strict-aliasing
+CPPFLAGS    +=  -I/usr/include/python3.6 -I/usr/include/python3.7 -Ilib
+#-I../matrix/bindings/python/rgbmatrix
+
+include utility.mk 		# Functions run_and_test, sync_git
+
+OUTDIR			=		shapeshifter
+BINDINGS 		=		$(OUTDIR)/sprite.so $(OUTDIR)/panel.so $(OUTDIR)/loop.so
+OBJECTS			=		build/sprite.o build/led-loop.o build/shapeshifter.o
+BINARIES		=		$(OUTDIR)/shapeshifter
 
 
-all : $(BINARIES)
+all : $(BINARIES) bindings
 
 bindings : $(BINDINGS)
+	@cp bindings/__init__.py $(OUTDIR)/
 
 
-$(RGB_LIBRARY): FORCE				# beware!
+$(RGB_LIBRARY): FORCE
+	@echo "###### Make matrix lib"
 	$(MAKE) -C $(RGB_LIBDIR)
-
-# $ sudo apt install libgraphicsmagick++-dev libwebp-dev
-shapeshifter: $(OBJECTS) $(RGB_LIBRARY)
-	@echo "###### Make shapeshifter"
-	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(LDFLAGS) $(MAGICK_LDFLAGS)
 	@echo "######"
 
-%.o : %.cc
-	@echo "###### Make object file $@"
-	$(CXX) $(CXXFLAGS) -I$(RGB_INCDIR) -I$(RAPIDJSON_INCDIR) $(MAGICK_CXXFLAGS) -c -o $@ $<
-	@echo "######"
+$(OUTDIR)/shapeshifter: $(OBJECTS) $(RGB_LIBRARY)
+	@mkdir -p $(@D)
+	@$(call run_and_test \
+		,$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(OBJECTS) -o $@ $(LDFLAGS) $(LDLIBS))
 
-%.cythonize.so : %.pyx
-	$(CYTHONIZE) -X language_level=3 --inplace $@
+build/%.o : lib/%.cc
+	@mkdir -p $(@D)
+	@$(call run_and_test \
+		,$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<)
 
-%.so : %.cython.cc
-	$(CXX) $(CYTHON_CXXFLAGS) $(MAGICK_CXXFLAGS) -I/usr/include/python3.6 -o $@ $^ $(MAGICK_LDFLAGS)
+$(OUTDIR)/%.cythonize.so : bindings/%.pyx
+	@mkdir -p $(@D)
+	@$(call run_and_test \
+		,$(CYTHONIZE) $(CPPFLAGS) -X language_level=3 --inplace $@\
+		,Cythonizing)
 
-%.cython.cc : %.pyx
-	$(CYTHON) -X language_level=3 --cplus -o $@ $^
+$(OUTDIR)/%.so : build/%.cython.cc
+	@mkdir -p $(@D)
+	@$(call run_and_test \
+		,$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS))
+
+build/%.cython.cc : bindings/%.pyx
+	@mkdir -p $(@D)
+	@$(call run_and_test \
+		,$(CYTHON) $(CPPFLAGS) -X language_level=3 --cplus -o $@ $^ \
+		,Building)
 
 sync-to-pi :
-	@echo "Syncing to Raspberry Pi"
-	rsync -auvhz -e ssh *.cc *.h *.py Makefile \
-		dietpi@192.168.178.36:/home/dietpi/shapeshifter/
+	@$(call sync_git,"dietpi@192.168.178.36:/home/dietpi/shapeshifter/")
 
 clean:
-	rm -f $(OBJECTS) $(BINARIES)
-	rm -f *.h.gch
+	rm -f $(OBJECTS) $(BINARIES) $(BINDINGS)
+	rm -rf $(OUTDIR)
 	rm -rf build
-	rm -rf *.so
-	rm -rf *.cython.cc
+	rm -f include/*.h.gch
+	rm -rf bindings/__pycache__
+	rm -rf bindings/*.so
+	rm -rf bindings/*.cython.cc
 
 FORCE:
 
-.PHONY: FORCE sync-to-pi copy clean
+.PHONY: FORCE sync-to-pi clean bindings

@@ -1,4 +1,7 @@
+bin
+build
 sprites
+__pycache__
 shapeshifter
 *.cython.cc
 *.so
