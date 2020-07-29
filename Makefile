@@ -11,7 +11,7 @@ CFLAGS			=		-Wall -Wextra -Wno-unused-parameter -O3 -g
 CXXFLAGS		=		$(CFLAGS)
 CPPFLAGS 		=		-Iinclude
 # rpi-led-rgb-matrix (https://github.com/hzeller/rpi-rgb-led-matrix)
-RGB_DIR     =   matrix
+RGB_DIR     =   lib/rgbmatrix
 CPPFLAGS    +=  -I$(RGB_DIR)/include
 LDFLAGS     +=  -L$(RGB_DIR)/lib
 LDLIBS      +=  -lrgbmatrix -lrt -lm -lpthread
