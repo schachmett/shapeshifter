@@ -11,7 +11,6 @@
 #include <unistd.h>     // some POSIX API calls like pipe, fork
 
 // external libraries:
-#include "rapidjson/document.h"
 #include <Magick++.h>
 #include <magick/image.h>
 
@@ -29,7 +28,7 @@ static volatile bool INTERRUPT_RECEIVED = false;
 
 void animate(led_loop::SpriteAnimationLoop* animation) {
   while (!INTERRUPT_RECEIVED) {
-    animation->run();
+    animation->doFrame();
   }
 }
 void dostuff(SpriteList* sprites, std::mutex* sprites_mutex) {

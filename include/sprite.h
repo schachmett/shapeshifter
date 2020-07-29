@@ -2,6 +2,7 @@
 #define SPRITE_H
 
 #include <vector>
+#include <cstring>
 
 #include <Magick++.h>
 #include <magick/image.h>
@@ -56,9 +57,12 @@ namespace Sprites {
       Sprite(SpriteID id, const char* filename);
       void loadMatrix(const PixelMatrix mat);
       void loadMatrix(const char* filename, double resize_factor = 1.0);
-      SpriteID getID();
-      size_t getHeight();
-      size_t getWidth();
+
+      void setID(SpriteID);
+      const SpriteID& getID() const;
+      const std::string& getFilename() const;
+      const size_t& getWidth() const;
+      const size_t& getHeight() const;
 
       void doStep();
       void flip();
@@ -70,7 +74,7 @@ namespace Sprites {
       void setPixel(const int x, const int y, const Pixel* pixel);
       void setPixel(const Point* point, const Pixel* pixel);
       void setPixel(const ColoredPixel* cpixel);
-      Pixel* getPixel(const int x, const int y);
+      const Pixel& getPixel(const int x, const int y) const;
 
       void setPosition(const Point p);
       void addToPosition(const Point p);
@@ -80,14 +84,14 @@ namespace Sprites {
       void setDirection(const double ang);
       void setDirection(const char dir);
       void addDirection(const double ang);
-      double* getDirection();
+      const double& getDirection() const;
 
       void setSpeed(const double speed);
       void addSpeed(const double speed);
-      double* getSpeed();
+      const double& getSpeed() const;
 
       void setEdgeBehavior(const EdgeBehavior edge_behavior);
-      EdgeBehavior getEdgeBehavior();
+      const EdgeBehavior& getEdgeBehavior() const;
 
       bool getWrapped();
 
@@ -95,6 +99,7 @@ namespace Sprites {
       Point wrap_edge(double x, double y);
 
       SpriteID id;
+      std::string filename;
       PixelMatrix matrix;
       size_t width;
       size_t height;
@@ -113,6 +118,7 @@ namespace Sprites {
   };
 
   typedef std::map<SpriteID, Sprite*> SpriteList;
+  // typedef std::vector<Sprite*>::iterator SpriteIterator;
 
 } // end namespace Sprites
 

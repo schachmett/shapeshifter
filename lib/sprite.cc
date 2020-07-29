@@ -93,14 +93,22 @@ void Sprite::loadMatrix(PixelMatrix mat) {
 void Sprite::loadMatrix(const char* filename, double resize_factor) {
   PixelMatrix mat = Sprites::loadMatrix(filename, resize_factor);
   this->loadMatrix(mat);
+  this->filename = filename;
 }
-SpriteID Sprite::getID() {
+
+const SpriteID& Sprite::getID() const {
   return this->id;
 }
-size_t Sprite::getWidth() {
+void Sprite::setID(SpriteID id) {
+  this->id = id;
+}
+const std::string& Sprite::getFilename() const {
+  return this->filename;
+}
+const size_t& Sprite::getWidth() const {
   return this->width;
 }
-size_t Sprite::getHeight() {
+const size_t& Sprite::getHeight() const {
   return this->height;
 }
 
@@ -117,14 +125,14 @@ void Sprite::doStep() {
 }
 
 // Get drawing data
-Pixel* Sprite::getPixel(const int x, const int y) {
+const Pixel& Sprite::getPixel(const int x, const int y) const {
   static Pixel EMPTY_PIXEL = {0, 0, 0};
-  if (this->invisible) return &EMPTY_PIXEL;
-  if (x < 0) return &EMPTY_PIXEL;
-  if (y < 0) return &EMPTY_PIXEL;
-  if ((size_t) x > this->width) return &EMPTY_PIXEL;
-  if ((size_t) y > this->height) return &EMPTY_PIXEL;
-  Pixel* pixel = &this->matrix[y][x];
+  if (this->invisible) return EMPTY_PIXEL;
+  if (x < 0) return EMPTY_PIXEL;
+  if (y < 0) return EMPTY_PIXEL;
+  if ((size_t) x > this->width) return EMPTY_PIXEL;
+  if ((size_t) y > this->height) return EMPTY_PIXEL;
+  const Pixel& pixel = this->matrix[y][x];
   return pixel;
 }
 
@@ -166,8 +174,8 @@ void Sprite::setDirection(char dir) {
 void Sprite::addDirection(double ang_inc) {
   this->direction += ang_inc;
 }
-double* Sprite::getDirection() {
-  return &this->direction;
+const double& Sprite::getDirection() const {
+  return this->direction;
 }
 void Sprite::setSpeed(double speed) {
   this->speed = speed;
@@ -175,15 +183,15 @@ void Sprite::setSpeed(double speed) {
 void Sprite::addSpeed(double speed_inc) {
   this->speed += speed_inc;
 }
-double* Sprite::getSpeed() {
-  return &this->speed;
+const double& Sprite::getSpeed() const {
+  return this->speed;
 }
 
 // Data regarding the sprite's behavior and status at the edge
 void Sprite::setEdgeBehavior(EdgeBehavior edge_behavior) {
   this->edge_behavior = edge_behavior;
 }
-EdgeBehavior Sprite::getEdgeBehavior() {
+const EdgeBehavior& Sprite::getEdgeBehavior() const {
   return this->edge_behavior;
 }
 bool Sprite::getWrapped() {
