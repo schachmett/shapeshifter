@@ -35,6 +35,7 @@ SpriteAnimationLoop::SpriteAnimationLoop(rgb_matrix::RGBMatrix* matrix,
   this->matrix = matrix;
   this->canvas = this->matrix->CreateFrameCanvas();
   this->sprites = sprites;
+  this->sprites_mutex = new std::mutex;   // do i need to del?
   if (options != nullptr) {
     this->frame_time_ms = options->frame_time_ms;
   }
@@ -46,9 +47,14 @@ SpriteAnimationLoop::SpriteAnimationLoop(rgb_matrix::RGBMatrix* matrix,
                      SpriteAnimationLoop(matrix, sprites, options) {
     this->sprites_mutex = sprites_mutex;
 }
+SpriteAnimationLoop::~SpriteAnimationLoop() {
+  this->is_running = false;
+  if(this->animation_thread.joinable()) {
+    this->animation_thread.join();
+  }
+}
 
 void SpriteAnimationLoop::startLoop() {
-  printf("I am called to start\n");
   this->is_running = true;
   this->animation_thread = std::thread(&SpriteAnimationLoop::animation_loop, this);
 }
@@ -56,12 +62,9 @@ const std::thread& SpriteAnimationLoop::getThread() const {
   return this->animation_thread;
 }
 void SpriteAnimationLoop::animation_loop() {
-  printf("I am starting\n");
-  printf(this->is_running ? "true\n" : "false\n");
-  // while (this->is_running) {
-  //   printf("I am looping\r");
-  //   this->doFrame();
-  // }
+  while (this->is_running) {
+    this->doFrame();
+  }
 }
 void SpriteAnimationLoop::endLoop() {
   this->is_running = false;

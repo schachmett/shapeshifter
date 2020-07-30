@@ -30,6 +30,7 @@ namespace led_loop {
       SpriteAnimationLoop(rgb_matrix::RGBMatrix* matrix,
                           Sprites::SpriteList* sprites,
                           LoopOptions* options = nullptr);
+      ~SpriteAnimationLoop();
       void startLoop();
       const std::thread& getThread() const;
       void endLoop();

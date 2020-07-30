@@ -41,9 +41,8 @@ cdef class PySpriteList:
         if self.c_sprl.find(pystr_to_chars(key)) != self.c_sprl.end():
             print("overwriting")
         if sprite.c_spr.getID() != pystr_to_chars(key):
-            print(f"setting ID: {cstr_to_pystr(sprite.c_spr.getID())} to "
-                  f"{key}")
             sprite.c_spr.setID(pystr_to_chars(key))
+            # print(f"Set ID {cstr_to_pystr(sprite.c_spr.getID())} to {key}")
         # cdef Sprite* c_spr = new Sprite(_str_to_chars(sprite.fname))
         self.c_sprl[pystr_to_chars(key)] = sprite.c_spr
         self.py_sprites[key] = sprite

@@ -22,17 +22,18 @@ def main():
         berlinH=PySprite("sprites/clubs/berlin_H42.png"),
         freiburg=PySprite("sprites/clubs/freiburg42.png")
     )
-    slist2["freiburg"].position = 5, 5
+    slist2["freiburg"].position = 180, 5
     slist2["berlinH"].direction = 30
     slist2["berlinH"].speed = 1
+    berlin = slist2["berlinH"]
     # opt = PanelOptions()
     # print(opt.hardware_mapping)
     # panel = PyRGBPanel(drop_privileges=0)
     animation = PySpriteAnimationLoop(slist2)
     animation.start()
-    for _ in range(5):
-        print("still alive")
-        time.sleep(1)
+    for _ in range(300):
+        berlin.direction += 1
+        time.sleep(0.1)
     animation.end()
 
 
