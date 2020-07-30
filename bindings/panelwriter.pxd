@@ -1,7 +1,9 @@
 """
-Simplified rewrite of the bindings in
-../matrix/bindings/python/rgbmatrix
+Bindings for the main loop that runs the panel animations.
 """
+
+# from .panel cimport RGBMatrix
+from .sprite cimport SpriteList
 
 from libcpp cimport bool
 from libc.stdint cimport uint8_t, uint32_t
@@ -13,6 +15,7 @@ cdef extern from "canvas.h" namespace "rgb_matrix":
         # void SetPixel(int, int, unit8_t, uint8_t, uint8_t) nogil
         void Clear() nogil
         # void Fill(uint8_t, uint8_t, uint8_t) nogil
+        void RGBPrintHWM()
 
 cdef extern from "led-matrix.h" namespace "rgb_matrix":
     cdef cppclass RGBMatrix(Canvas):
@@ -74,3 +77,19 @@ cdef class PanelOptions:
 cdef class PyRGBPanel:
     cdef PanelOptions options
     cdef RGBMatrix* __matrix
+    cdef Canvas* __getCanvas(self) except *
+
+
+cdef extern from "led-loop.cc":
+    pass
+cdef extern from "led-loop.h" namespace "led_loop":
+    ctypedef long long int tmillis_t
+
+    cdef struct LoopOptions:
+        LoopOptions() except +
+        tmillis_t frame_time_ms
+
+    cdef cppclass SpriteAnimationLoop:
+        SpriteAnimationLoop(RGBMatrix*, SpriteList*, LoopOptions*) except +
+        void startLoop()
+        void endLoop()

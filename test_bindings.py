@@ -2,9 +2,10 @@
 """This script shall test the bindings."""
 # pylint: disable=no-name-in-module
 
-from shapeshifter_pybindings import (
+import time
+from bindings import (
     PySprite, PySpriteList, PySpriteAnimationLoop,
-    PyRGBPanel, PanelOptions
+    # PyRGBPanel, PanelOptions
 )
 
 def main():
@@ -21,11 +22,18 @@ def main():
         berlinH=PySprite("sprites/clubs/berlin_H42.png"),
         freiburg=PySprite("sprites/clubs/freiburg42.png")
     )
-    # print(slist2["freiburg"].position)
+    slist2["freiburg"].position = 5, 5
+    slist2["berlinH"].direction = 30
+    slist2["berlinH"].speed = 1
     # opt = PanelOptions()
     # print(opt.hardware_mapping)
     # panel = PyRGBPanel(drop_privileges=0)
     animation = PySpriteAnimationLoop(slist2)
+    animation.start()
+    for _ in range(5):
+        print("still alive")
+        time.sleep(1)
+    animation.end()
 
 
 if __name__ == "__main__":

@@ -8,5 +8,4 @@ __author__ = "Simon Fischer <sf@simon-fischer.info>"
 
 
 from .sprite import PySprite, PySpriteList, EdgeBehavior
-from .loop import PySpriteAnimationLoop
-from .panel import PyRGBPanel, PanelOptions
+from .panelwriter import PySpriteAnimationLoop, PyRGBPanel, PanelOptions

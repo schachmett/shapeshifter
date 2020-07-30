@@ -11,7 +11,7 @@ BLUE        :=  $(shell tput setaf 12)
 # Use $(2) to indicate what is being done (default: Compiling)
 # see also http://www.lunderberg.com/2015/08/25/cpp-makefile-pretty-output/
 define run_and_test
-  printf "$(BLUE)$(if $(2),$(2),Compiling) $(@F)$(NORMFONT)...\r";          \
+  printf "$(BLUE)$(if $(2),$(2),Compiling) $@$(NORMFONT)...\r";          \
   $(1) 2> $@.log;                                                           \
   RESULT=$$?;                                                               \
   if [ $$RESULT -ne 0 ]; then                                               \
@@ -24,7 +24,7 @@ define run_and_test
 			"$(YELLOW)[WARNING]$(NORMFONT)\n"; 																		\
   else                                                                      \
     printf "%-70b%b" 																												\
-		"$(BLUE)$(if $(2),$(2),Compiling) $(@F)" 																\
+		"$(BLUE)$(if $(2),$(2),Compiling) $@" 																\
 		"$(GREEN)[OK]$(NORMFONT)\n"; 																						\
   fi;                                                                       \
   cat $@.log;                                                               \
@@ -37,9 +37,9 @@ endef
 define sync_git
   printf "$(BLUE)rsync the git repo to \"$(1)\"...$(NORMFONT)\n";         	\
   rsync -auhzvi --delete	 																									\
-		--exclude-from=.gitignore --exclude=".git" --exclude="rapidjson" -e ssh	\
+		--exclude-from=.gitignore --exclude=".git" -e ssh												\
 		./ $(1)                                                             		\
-		| sed -n -e 's/^[<>ch].* //p' -e 's/^\*//p'; 														\
+		| sed -n -e '/^cannot.*/p' -e 's/^[<>ch].* //p' -e 's/^\*//p'; 					\
   RESULT=$$?;                                                             	\
   if [ $$RESULT -ne 0 ]; then                                             	\
     printf "%-60b%b" "$(BLUE)rsync " "$(RED)[ERROR]$(NORMFONT)\n";      		\
@@ -54,4 +54,8 @@ define sync_git
 	# "." (rsync did nothing) and the "header" and "footer" are not displayed.
 	# Lines starting with a literal * are treated specially as they consist
 	# of messages (like deleting a file)
+endef
+
+define print_blue
+	printf "$(BLUE)$(1)$(NORMFONT)\n"
 endef

@@ -1,14 +1,25 @@
 # distutils: language = c++
+# distutils: sources = led-loop.cc
 # cython: language_level=3
 """
-Simplified rewrite of the bindings in
-../matrix/bindings/python/rgbmatrix
+Wrappers for RGBMatrix, Options (contains RGBMatrix::Options and RuntimeOptions)
+and the SpriteAnimationLoop that writes to the matrix.
+These can not be in separate files, because every FrameCanvas of the RGBMatrix
+holds a Framebuffer, and the static class variable
+Framebuffer::hardware_mapping_ is only visible inside the same module.
+(If the loop is in another module, it sees a hardware_mapping_ of NULL).
 """
 
+from cython.operator cimport dereference as deref
 from libcpp cimport bool
 from libc.stdint cimport uint8_t, uint32_t, uintptr_t
 
-#from .panel cimport Options, RuntimeOptions, RGBMatrix, FrameCanvas
+from .sprite cimport PySpriteList
+# These are automatically imported from $0.pxd
+# from .loop cimport (
+#     SpriteAnimationLoop, LoopOptions,
+#     Options, RuntimeOptions, RGBMatrix, FrameCanvas
+# )
 
 
 cdef class PyRGBPanel:
@@ -19,8 +30,17 @@ cdef class PyRGBPanel:
         self.__matrix = CreateMatrixFromOptions(options.__options, options.__rt_options)
 
     def __dealloc__(self):
-        self.__matrix.Clear()
-        del self.__matrix
+        if <void*>self.__matrix != NULL:
+            self.__matrix.Clear()
+            del self.__matrix
+
+    cdef Canvas* __getCanvas(self) except *:
+        if <void*>self.__matrix != NULL:
+            return self.__matrix
+        raise Exception("Canvas was destroyed or not initialized")
+
+    def test_cfc(self):
+        self.__matrix.CreateFrameCanvas()
 
     property luminanceCorrect:
         def __get__(self): return self.__matrix.luminance_correct()
@@ -43,6 +63,7 @@ cdef class PyRGBPanel:
 
 
 cdef class PanelOptions:
+
     def __cinit__(self, **options):
         defaults = {
             "hardware_mapping": "regular",
@@ -157,3 +178,23 @@ cdef class PanelOptions:
     property drop_privileges:
         def __get__(self): return self.__rt_options.drop_privileges
         def __set__(self, uint8_t value): self.__rt_options.drop_privileges = value
+
+
+cdef class PySpriteAnimationLoop:
+    cdef SpriteAnimationLoop* c_sal
+    cdef PyRGBPanel rgb
+
+    def __cinit__(self, PySpriteList sprites, **options):
+        cdef LoopOptions cl_options = LoopOptions()
+        # cdef PyRGBMatrixOptions matrix_opt = PyRGBMatrixOptions()
+        self.rgb = PyRGBPanel(brightness=50)
+        self.c_sal = new SpriteAnimationLoop(self.rgb.__matrix, &sprites.c_sprl, &cl_options)
+
+    def __dealloc__(self):
+        del self.c_sal
+
+    def start(self):
+        deref(self.c_sal).startLoop()
+
+    def end(self):
+        deref(self.c_sal).endLoop()

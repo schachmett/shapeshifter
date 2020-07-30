@@ -6,6 +6,7 @@
 #include "led-matrix.h"
 #include "sprite.h"
 
+
 namespace led_loop {
 
 tmillis_t getTimeInMillis() {
@@ -31,13 +32,8 @@ SpriteAnimationLoop::SpriteAnimationLoop(rgb_matrix::RGBMatrix* matrix,
                                          Sprites::SpriteList* sprites,
                                          LoopOptions* options) :
                      SpriteAnimationLoop() {
-  printf("matrix has address %p\n", matrix);
   this->matrix = matrix;
-  printf("thismatrix has address %p\n", this->matrix);
-  fprintf(stderr, "brightness1: %d\n", this->matrix->brightness());
-  // fprintf(stderr, "hwm: %s", matrix->)
   this->canvas = this->matrix->CreateFrameCanvas();
-  fprintf(stderr, "holy shit\n");
   this->sprites = sprites;
   if (options != nullptr) {
     this->frame_time_ms = options->frame_time_ms;
@@ -52,18 +48,24 @@ SpriteAnimationLoop::SpriteAnimationLoop(rgb_matrix::RGBMatrix* matrix,
 }
 
 void SpriteAnimationLoop::startLoop() {
-  animation_thread = std::thread(&SpriteAnimationLoop::animation_loop, this);
+  printf("I am called to start\n");
+  this->is_running = true;
+  this->animation_thread = std::thread(&SpriteAnimationLoop::animation_loop, this);
 }
 const std::thread& SpriteAnimationLoop::getThread() const {
   return this->animation_thread;
 }
 void SpriteAnimationLoop::animation_loop() {
-  while (this->is_running) {
-    this->doFrame();
-  }
+  printf("I am starting\n");
+  printf(this->is_running ? "true\n" : "false\n");
+  // while (this->is_running) {
+  //   printf("I am looping\r");
+  //   this->doFrame();
+  // }
 }
 void SpriteAnimationLoop::endLoop() {
   this->is_running = false;
+  this->animation_thread.join();
 }
 
 void SpriteAnimationLoop::prepareFrame() {
