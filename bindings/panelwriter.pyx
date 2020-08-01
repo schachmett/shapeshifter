@@ -27,7 +27,10 @@ cdef class PyRGBPanel:
         if options == None:
             options = PanelOptions(**kw_options)
         self.options = options
-        self.__matrix = CreateMatrixFromOptions(options.__options, options.__rt_options)
+        self.__matrix = CreateMatrixFromOptions(
+            options.__options,
+            options.__rt_options
+        )
 
     def __dealloc__(self):
         if <void*>self.__matrix != NULL:
@@ -61,21 +64,38 @@ cdef class PyRGBPanel:
         def __get__(self): return self.__matrix.width()
 
 
-
 cdef class PanelOptions:
-
     def __cinit__(self, **options):
-        defaults = {
+
+        DEFAULT_PANEL_OPTIONS = {
             "hardware_mapping": "regular",
             "rows": 64,
             "cols": 64,
             "chain_length": 3,
-            "pwm_dither_bits": 1,
-            "drop_privileges": 1
+            "parallel": 1,
+            "pwm_bits": 11,
+            "pwm_lsb_nanoseconds": 130,
+            "brightness": 100,
+            "scan_mode": 1,         # try 0?
+            "row_address_type": 0,
+            "multiplexing": 0,
+            "pwm_dither_bits": 0,   # better 1 (?)
+            "limit_refresh_rate_hz": 0,
+            "disable_hardware_pulsing": False,
+            "show_refresh_rate": False,
+            "inverse_colors": False,
+            "led_rgb_sequence": "RGB",
+            # "pixel_mapper_config": NULL,
+            # "panel_type": NULL,
+            # Runtime Opts
+            "gpio_slowdown": 1,
+            "daemon": 0,           # -1 = disabled
+            "drop_privileges": 1,
+            "do_gpio_init": True
         }
         self.__options = Options()
         self.__rt_options = RuntimeOptions()
-        options = dict(defaults, **options)
+        options = dict(DEFAULT_PANEL_OPTIONS, **options)
         for key, value in options.items():
             if not hasattr(self, key):
                 continue
@@ -173,7 +193,7 @@ cdef class PanelOptions:
 
     property daemon:
         def __get__(self): return self.__rt_options.daemon
-        def __set__(self, uint8_t value): self.__rt_options.daemon = value
+        def __set__(self, int value): self.__rt_options.daemon = value
 
     property drop_privileges:
         def __get__(self): return self.__rt_options.drop_privileges
@@ -186,9 +206,14 @@ cdef class PySpriteAnimationLoop:
 
     def __cinit__(self, PySpriteList sprites, **options):
         cdef LoopOptions cl_options = LoopOptions()
-        # cdef PyRGBMatrixOptions matrix_opt = PyRGBMatrixOptions()
-        self.rgb = PyRGBPanel(brightness=50)
-        self.c_sal = new SpriteAnimationLoop(self.rgb.__matrix, &sprites.c_sprl, &cl_options)
+        if "frame_time_ms" in options:
+            cl_options.frame_time_ms = options.pop("frame_time_ms")
+        self.rgb = PyRGBPanel(**options)
+        self.c_sal = new SpriteAnimationLoop(
+            self.rgb.__matrix,
+            &sprites.c_sprl,
+            &cl_options
+        )
 
     def __dealloc__(self):
         del self.c_sal

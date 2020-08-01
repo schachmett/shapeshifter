@@ -24,23 +24,29 @@ cdef extern from "sprite.h" namespace "Sprites":
         char blue
 
     cpdef enum EdgeBehavior:        #cpdef makes it a PEP 435 enum
-        UNDEFINED_EDGE_BEHAVIOR = 1
         LOOP_DIRECT = 2
-        LOOP_INDIRECT = 3
+        LOOP_INDIRECT = 3   # (default)
         BOUNCE = 4
-        STOP = 5
+        STOP = 5         # does not work fully (can still creep into edge)
         DISAPPEAR = 6
 
     cdef cppclass Sprite:
         Sprite() except +
-        Sprite(SpriteID) except +
-        Sprite(const char*) except +
-        Sprite(SpriteID, const char*) except +
+        Sprite(string) except +
+        Sprite(string, double) except +
+
         void setID(SpriteID)
         const SpriteID getID() const
+        void setFilename(string)
         const string getFilename() const
+        void setWidth(int)
+        const int getWidth() const
+        void setHeight(int)
+        const int getHeight() const
+
         const Pixel getPixel(int, int) const
         void doStep()
+
         void setPosition(const Point)
         const Point getPosition() const
         void setDirection(const double)

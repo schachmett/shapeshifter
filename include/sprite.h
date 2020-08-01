@@ -44,8 +44,8 @@ namespace Sprites {
   typedef std::vector<std::vector<Pixel>> PixelMatrix;
   typedef std::vector<ColoredPixel> ColoredPixelList;
 
-  Magick::Image loadImage(const char* filename, const double resize_factor = 1);
-  PixelMatrix loadMatrix(const char* filename, const double resize_factor = 1);
+  // Magick::Image loadImage(const char* filename, const double resize_factor = 1);
+  // PixelMatrix loadMatrix(const char* filename, const double resize_factor = 1);
 
   typedef std::string SpriteID;
 
@@ -54,14 +54,16 @@ namespace Sprites {
       Sprite();
       Sprite(SpriteID id);
       Sprite(const char* filename);
-      Sprite(SpriteID id, const char* filename);
-      void loadMatrix(const PixelMatrix mat);
-      void loadMatrix(const char* filename, double resize_factor = 1.0);
+      Sprite(const char* filename, const double resize_factor);
+      // Sprite(const char* filename, SpriteID id);
 
       void setID(SpriteID);
       const SpriteID& getID() const;
+      void setFilename(const std::string filename);
       const std::string& getFilename() const;
+      void setWidth(int width);
       const size_t& getWidth() const;
+      void setHeight(int height);
       const size_t& getHeight() const;
 
       void doStep();
@@ -96,11 +98,15 @@ namespace Sprites {
       bool getWrapped();
 
     private:
+      void loadMatrix(const PixelMatrix mat);
+      void loadMatrix(const std::string filename, double resize_factor = 1.0);
       Point wrap_edge(double x, double y);
 
       SpriteID id;
       std::string filename;
       PixelMatrix matrix;
+
+      double resize_factor;
       size_t width;
       size_t height;
 

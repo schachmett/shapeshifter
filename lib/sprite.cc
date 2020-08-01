@@ -21,26 +21,27 @@ std::string generateID() {
 namespace Sprites {
 
 // Some simple structs
-PanelSize::PanelSize(size_t x, size_t y) : x(x), y(y) { };
-Pixel::Pixel(char red, char green, char blue) : red(red), green(green), blue(blue) { };
-Point::Point(double x, double y) : x(x), y(y) {};
-// int Point::xi() { return std::round(this->x); }
-// int Point::yi() { return std::round(this->y); }
+PanelSize::PanelSize(size_t x, size_t y) :
+  x(x), y(y) { };
+Pixel::Pixel(char red, char green, char blue) :
+  red(red), green(green), blue(blue) { };
+Point::Point(double x, double y) :
+  x(x), y(y) {};
 
 // Image loading via Magick
-Magick::Image loadImage(const char* filename,
-                               const double resize_factor) {
-  Magick::Image img;
-  std::vector<Magick::Image> frames;
-  try {
-    readImages(&frames, filename);
-  } catch (std::exception& e) {
-    if (e.what()) fprintf(stderr, "Magickimage error: %s\n", e.what());
-  }
-  if (frames.size() == 0) fprintf(stderr, "No image found.\n");
-  if (frames.size() > 1) fprintf(stderr, "Discarded additional frames.\n");
-
-  img = frames[0];
+Magick::Image loadImage(const std::string filename, const double resize_factor) {
+  // Magick::Image img;
+  // std::vector<Magick::Image> frames;
+  // try {
+  //   readImages(&frames, filename);
+  // } catch (std::exception& e) {
+  //   if (e.what()) fprintf(stderr, "Magickimage error: %s\n", e.what());
+  // }
+  // if (frames.size() == 0) fprintf(stderr, "No image found.\n");
+  // if (frames.size() > 1) fprintf(stderr, "Discarded additional frames.\n");
+  //
+  // img = frames[0];    // tweak here for gifs!
+  Magick::Image img = Magick::Image(filename);
   if (resize_factor != 1.0) {
     const double target_width = (double) img.columns() * resize_factor;
     const double target_height = (double) img.rows() * resize_factor;
@@ -48,9 +49,9 @@ Magick::Image loadImage(const char* filename,
   }
   return img;
 }
-PixelMatrix loadMatrix(const char* filename, double resize_factor) {
-  PixelMatrix mat;
+PixelMatrix loadMatrix(const std::string filename, const double resize_factor) {
   Magick::Image img = loadImage(filename, resize_factor);
+  PixelMatrix mat;
   for (size_t img_y = 0; img_y < img.rows(); ++img_y) {
     PixelColumn column;
     for (size_t img_x = 0; img_x < img.columns(); ++img_x) {
@@ -68,45 +69,49 @@ PixelMatrix loadMatrix(const char* filename, double resize_factor) {
 
 // Sprite constructor and Image loading / initialization
 Sprite::Sprite() :
-    matrix(), width(0), height(0),
+    matrix(), resize_factor(1.0), width(0), height(0),
     max_dimensions(), edge_behavior(LOOP_INDIRECT),
     invisible(false), wrapped(false),
     position(),  direction(0), speed(0),
     position_goal(nan(""), nan("")), goal_steps(-1) {
   this->id = generateID();
 };
-Sprite::Sprite(SpriteID id) : Sprite() {
-  this->id = id;
-}
 Sprite::Sprite(const char* filename) : Sprite() {
   this->loadMatrix(filename);
 }
-Sprite::Sprite(SpriteID id, const char* filename) : Sprite() {
-  this->id = id;
+Sprite::Sprite(const char* filename, const double resize_factor) {
   this->loadMatrix(filename);
 }
-void Sprite::loadMatrix(PixelMatrix mat) {
-  this->matrix.swap(mat);
-  this->height = this->matrix.size();
-  this->height < 1 ? this->width = 0 : this->width = this->matrix[0].size();
-}
-void Sprite::loadMatrix(const char* filename, double resize_factor) {
-  PixelMatrix mat = Sprites::loadMatrix(filename, resize_factor);
-  this->loadMatrix(mat);
-  this->filename = filename;
-}
+// Sprite::Sprite(SpriteID id) : Sprite() {
+//   this->id = id;
+// }
+// Sprite::Sprite(const char* filename, SpriteID id) : Sprite() {
+//   this->id = id;
+//   this->loadMatrix(filename);
+// }
 
+void Sprite::setID(SpriteID id) {
+  this->id = id;
+}
 const SpriteID& Sprite::getID() const {
   return this->id;
 }
-void Sprite::setID(SpriteID id) {
-  this->id = id;
+void Sprite::setFilename(const std::string filename) {
+  this->loadMatrix(filename, 1.0);
 }
 const std::string& Sprite::getFilename() const {
   return this->filename;
 }
+void Sprite::setWidth(int width) {
+  double new_resize = width / (this->width / this->resize_factor);
+  this->loadMatrix(this->filename, new_resize);
+}
 const size_t& Sprite::getWidth() const {
   return this->width;
+}
+void Sprite::setHeight(const int height) {
+  double new_resize = height / (this->height / this->resize_factor);
+  this->loadMatrix(this->filename, new_resize);
 }
 const size_t& Sprite::getHeight() const {
   return this->height;
@@ -198,7 +203,20 @@ bool Sprite::getWrapped() {
   return this->wrapped;
 }
 
+
 // Private methods
+void Sprite::loadMatrix(PixelMatrix mat) {
+  this->matrix.swap(mat);
+  this->height = this->matrix.size();
+  this->height < 1 ? this->width = 0 : this->width = this->matrix[0].size();
+}
+void Sprite::loadMatrix(const std::string filename, double resize_factor) {
+  PixelMatrix mat = Sprites::loadMatrix(filename, resize_factor);
+  this->loadMatrix(mat);
+  this->resize_factor = resize_factor;
+  this->filename = filename;
+}
+
 Point Sprite::wrap_edge(double x, double y) {
   size_t xmax = this->max_dimensions.x;
   size_t ymax = this->max_dimensions.y;

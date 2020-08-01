@@ -68,7 +68,9 @@ void SpriteAnimationLoop::animation_loop() {
 }
 void SpriteAnimationLoop::endLoop() {
   this->is_running = false;
-  this->animation_thread.join();
+  if(this->animation_thread.joinable()) {
+    this->animation_thread.join();
+  }
 }
 
 void SpriteAnimationLoop::prepareFrame() {

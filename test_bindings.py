@@ -3,9 +3,10 @@
 # pylint: disable=no-name-in-module
 
 import time
+import random
+
 from bindings import (
-    PySprite, PySpriteList, PySpriteAnimationLoop,
-    # PyRGBPanel, PanelOptions
+    PySprite, PySpriteList, PySpriteAnimationLoop, EdgeBehavior
 )
 
 def main():
@@ -16,25 +17,40 @@ def main():
     # sprite.speed = 3.1
     # sprite.do_step()
     # sprite.print_status()
+    random.seed()
 
-
-    slist2 = PySpriteList(
-        berlinH=PySprite("sprites/clubs/berlin_H42.png"),
-        freiburg=PySprite("sprites/clubs/freiburg42.png")
+    slist = PySpriteList(
+        bremen=PySprite("sprites/clubs/bremen42.png"),
+        # bremen=PySprite(
+        #     "http://www.httpvshttps.com/check.png?15962028684488_6"
+        # )
+        # freiburg=PySprite("sprites/clubs/freiburg42.png")
     )
-    slist2["freiburg"].position = 180, 5
-    slist2["berlinH"].direction = 30
-    slist2["berlinH"].speed = 1
-    berlin = slist2["berlinH"]
-    # opt = PanelOptions()
-    # print(opt.hardware_mapping)
-    # panel = PyRGBPanel(drop_privileges=0)
-    animation = PySpriteAnimationLoop(slist2)
+    # slist["freiburg"].position = 180, 5
+    bremen = slist["bremen"]
+    # bremen.height = 10
+    bremen.direction = 30
+    bremen.speed = 1
+    bremen.edge_behavior = EdgeBehavior.LOOP_INDIRECT
+    animation = PySpriteAnimationLoop(
+        slist,
+        frame_time_ms=10,
+        pwm_dither_bits=1,
+    )
     animation.start()
-    for _ in range(300):
-        berlin.direction += 1
-        time.sleep(0.1)
-    animation.end()
+    try:
+        while True:
+            bremen.direction += random.randint(-5, 5)
+            bremen.speed += random.randint(-100, 100) / 1000
+            if bremen.speed > 2:
+                bremen.speed -= 0.2
+            elif bremen.speed < -2:
+                bremen.speed += 0.2
+            time.sleep(0.01)
+    except KeyboardInterrupt:
+        print("User interrupt")
+    finally:
+        animation.end()
 
 
 if __name__ == "__main__":

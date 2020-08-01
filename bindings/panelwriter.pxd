@@ -39,13 +39,14 @@ cdef extern from "led-matrix.h" namespace "rgb_matrix":
         int gpio_slowdown
         int daemon
         int drop_privileges
+        bool do_gpio_init
 
     RGBMatrix* CreateMatrixFromOptions(Options, RuntimeOptions)
 
 cdef extern from "led-matrix.h" namespace "rgb_matrix::RGBMatrix":
     cdef struct Options:
         Options() except +
-        const char *hardware_mapping
+        const char* hardware_mapping
         int rows
         int cols
         int chain_length
@@ -61,9 +62,9 @@ cdef extern from "led-matrix.h" namespace "rgb_matrix::RGBMatrix":
         bool disable_hardware_pulsing
         bool show_refresh_rate
         bool inverse_colors
-        const char *led_rgb_sequence
-        const char *pixel_mapper_config
-        const char *panel_type
+        const char* led_rgb_sequence
+        const char* pixel_mapper_config
+        const char* panel_type
 
 
 cdef class PanelOptions:

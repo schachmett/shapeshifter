@@ -23,9 +23,6 @@ cdef class PySpriteList:
 
     def __cinit__(self, **dict_of_pysprites):
         self.py_sprites = {}
-        # cdef Py_ssize_t i
-        # for i, _ in enumerate(sprites):
-        #     self.c_sprl[str(i)] = sprites[i]
 
     def __init__(self, **dict_of_pysprites):
         for key, py_sprite in dict_of_pysprites.items():
@@ -53,16 +50,13 @@ cdef class PySprite:
     # cdef bool _ptr_owner
     # cdef bool _is_initialized
 
-    def __cinit__(self, str fname, str ID=""):
+    def __cinit__(self, str fname):
         if fname == "":
             self._is_initialized = False
             return
         self._is_initialized = True
         self._ptr_owner = True
-        if ID == "":
-            self.c_spr = new Sprite(pystr_to_chars(fname))
-        else:
-            self.c_spr = new Sprite(pystr_to_chars(ID), pystr_to_chars(fname))
+        self.c_spr = new Sprite(pystr_to_chars(fname))
 
     @staticmethod
     cdef PySprite from_ptr(Sprite* sprite, bool owner=False):
@@ -84,6 +78,47 @@ cdef class PySprite:
     def do_step(self):
         deref(self.c_spr).doStep()
 
+    property ID:
+        def __get__(self): return deref(self.c_spr).getID().decode("UTF-8")
+        # def __set__(self, str value): deref(self.c_spr).setID(pystr_to_chars(value))
+
+    property fname:
+        def __get__(self): return deref(self.c_spr).getFilename()
+        def __set__(self, str value): deref(self.c_spr).setFilename(value)
+
+    property width:
+        def __get__(self): return deref(self.c_spr).getWidth()
+        def __set__(self, int value): deref(self.c_spr).setWidth(value)
+
+    property height:
+        def __get__(self): return deref(self.c_spr).getHeight()
+        def __set__(self, int value): deref(self.c_spr).setHeight(value)
+
+    property position:
+        def __get__(self):
+            p = deref(self.c_spr).getPosition()
+            return p.x, p.y
+        def __set__(self, (double, double) value):
+            cdef Point p
+            p.x, p.y = value[0], value[1]
+            deref(self.c_spr).setPosition(p)
+
+    property direction:
+        def __get__(self): return deref(self.c_spr).getDirection()
+        def __set__(self, double value): deref(self.c_spr).setDirection(value)
+
+    property speed:
+        def __get__(self): return deref(self.c_spr).getSpeed()
+        def __set__(self, double value): deref(self.c_spr).setSpeed(value)
+
+    property edge_behavior:
+        def __get__(self): return deref(self.c_spr).getEdgeBehavior()
+        def __set__(self, value): deref(self.c_spr).setEdgeBehavior(value)
+
+    def color(self, int x, int y):
+        px = deref(self.c_spr).getPixel(x, y)
+        return px.red, px.green, px.blue
+
     def print_status(self):
         print(
             f"Sprite '{self.ID}'\n"
@@ -91,50 +126,3 @@ cdef class PySprite:
             f"\twith speed {self.speed}, direction {self.direction}\n"
             f"\thas EdgeBehavior {self.edge_behavior}"
         )
-
-    @property
-    def ID(self):
-        return deref(self.c_spr).getID().decode("UTF-8")
-    @ID.setter
-    def ID(self, value):
-        deref(self.c_spr).setID(pystr_to_chars(value))
-
-    @property
-    def fname(self):
-        return deref(self.c_spr).getFilename()
-
-    def color(self, int x, int y):
-        px = deref(self.c_spr).getPixel(x, y)
-        return px.red, px.green, px.blue
-
-    @property
-    def position(self):
-        p = deref(self.c_spr).getPosition()
-        return p.x, p.y
-    @position.setter
-    def position(self, (double, double) value):
-        cdef Point p
-        p.x, p.y = value[0], value[1]
-        deref(self.c_spr).setPosition(p)
-
-    @property
-    def direction(self):
-        return deref(self.c_spr).getDirection()
-    @direction.setter
-    def direction(self, double value):
-        deref(self.c_spr).setDirection(value)
-
-    @property
-    def speed(self):
-        return deref(self.c_spr).getSpeed()
-    @speed.setter
-    def speed(self, double value):
-        deref(self.c_spr).setSpeed(value)
-
-    @property
-    def edge_behavior(self):
-        edge_behavior = deref(self.c_spr).getEdgeBehavior()
-        return edge_behavior
-    @edge_behavior.setter
-    def edge_behavior(self, value):
-        deref(self.c_spr).setEdgeBehavior(value)
