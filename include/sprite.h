@@ -67,6 +67,8 @@ namespace Sprites {
       const size_t& getHeight() const;
 
       void doStep();
+      void setVisible(bool visible);
+      bool getVisible() const;
       void flip();
       void flop();
       void rotate();
@@ -113,7 +115,8 @@ namespace Sprites {
       PanelSize max_dimensions;
       EdgeBehavior edge_behavior;
 
-      bool invisible;
+      bool visible;
+      bool out_of_bounds;
       bool wrapped;
 
       Point position;

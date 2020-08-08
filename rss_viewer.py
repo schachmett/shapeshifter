@@ -19,19 +19,30 @@ URL = "http://newsfeed.zeit.de/index"
 
 def main():
     rss = RSS(URL)
-    entry_dict = rss.parse_entry(0)
-    img_fname = rss.load_img_url(entry_dict["img_url"])
-
-    first = PySprite(img_fname)
-    first.position = 0, 0
-    sprites = PySpriteList(first=first)
-    first.height = 64
+    sprites = PySpriteList()
+    for i in range(len(rss.feed.entries)):
+        entry_dict = rss.parse_entry(i)
+        img_fname = rss.load_img_url(entry_dict["img_url"])
+        sprite = PySprite(img_fname)
+        sprite.height = 64
+        sprite.position = 0, 0
+        sprite.visible = False
+        sprites[str(i)] = sprite
 
     animation = PySpriteAnimationLoop(sprites, frame_time_ms=20)
     animation.start()
     try:
+        active_idx = 0
         while True:
-            time.sleep(0.1)
+            for i, sprite in enumerate(sprites.values()):
+                if i != active_idx:
+                    sprite.visible = False
+                else:
+                    sprite.visible = True
+            time.sleep(5)
+            active_idx += 1
+            if active_idx >= len(sprites):
+                active_idx = 0
     except KeyboardInterrupt:
         print("User interrupt")
     finally:

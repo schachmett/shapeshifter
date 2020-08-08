@@ -79,7 +79,9 @@ void SpriteAnimationLoop::prepareFrame() {
   for (auto &sprite_pair : *(this->sprites)) {
     Sprites::Sprite* sprite = sprite_pair.second;
     sprite->doStep();
-    this->drawSprite(sprite);
+    if (sprite->getVisible()) {
+      this->drawSprite(sprite);
+    }
   }
 }
 void SpriteAnimationLoop::doFrame() {

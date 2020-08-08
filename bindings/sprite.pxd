@@ -46,6 +46,8 @@ cdef extern from "sprite.h" namespace "Sprites":
 
         const Pixel getPixel(int, int) const
         void doStep()
+        void setVisible(bool)
+        bool getVisible() const
 
         void setPosition(const Point)
         const Point getPosition() const

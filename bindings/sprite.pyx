@@ -44,6 +44,21 @@ cdef class PySpriteList:
         self.c_sprl[pystr_to_chars(key)] = sprite.c_spr
         self.py_sprites[key] = sprite
 
+    def __delitem__(self, str key):
+        raise NotImplementedError
+
+    def __iter__(self):
+        return iter(self.py_sprites)
+
+    def values(self):
+        return self.py_sprites.values()
+
+    def keys(self):
+        return self.py_sprites.keys()
+
+    def __len__(self):
+        return len(self.py_sprites)
+
 
 cdef class PySprite:
     # cdef Sprite* c_spr
@@ -86,6 +101,10 @@ cdef class PySprite:
         def __get__(self): return deref(self.c_spr).getFilename()
         def __set__(self, str value): deref(self.c_spr).setFilename(value)
 
+    property visible:
+        def __get__(self): return deref(self.c_spr).getVisible()
+        def __set__(self, bool value): deref(self.c_spr).setVisible(value)
+
     property width:
         def __get__(self): return deref(self.c_spr).getWidth()
         def __set__(self, int value): deref(self.c_spr).setWidth(value)
@@ -121,7 +140,7 @@ cdef class PySprite:
 
     def print_status(self):
         print(
-            f"Sprite '{self.ID}'\n"
+            f"Sprite '{self.ID}' (visible: {self.visible})\n"
             f"\tat x={self.position[0]}, y={self.position[1]}\n"
             f"\twith speed {self.speed}, direction {self.direction}\n"
             f"\thas EdgeBehavior {self.edge_behavior}"

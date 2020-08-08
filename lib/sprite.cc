@@ -71,7 +71,7 @@ PixelMatrix loadMatrix(const std::string filename, const double resize_factor) {
 Sprite::Sprite() :
     matrix(), resize_factor(1.0), width(0), height(0),
     max_dimensions(), edge_behavior(LOOP_INDIRECT),
-    invisible(false), wrapped(false),
+    visible(true), out_of_bounds(false), wrapped(false),
     position(),  direction(0), speed(0),
     position_goal(nan(""), nan("")), goal_steps(-1) {
   this->id = generateID();
@@ -122,17 +122,24 @@ void Sprite::doStep() {
   this->direction = std::fmod(this->direction + 360, 360);
   double x = this->position.x + cos(this->direction * M_PI / 180) * this->speed;
   double y = this->position.y + sin(this->direction * M_PI / 180) * this->speed;
-  this->invisible = false;
+  this->out_of_bounds = false;
   this->wrapped = false;
   this->position = wrap_edge(x, y);
   if (this->goal_steps == 0) this->speed = 0;
   if (this->goal_steps >= 0) --this->goal_steps;
 }
+void Sprite::setVisible(bool visible) {
+  this->visible = visible;
+}
+bool Sprite::getVisible() const {
+  if (this->out_of_bounds) return false;
+  return this->visible;
+}
 
 // Get drawing data
 const Pixel& Sprite::getPixel(const int x, const int y) const {
   static Pixel EMPTY_PIXEL = {0, 0, 0};
-  if (this->invisible) return EMPTY_PIXEL;
+  if (!this->visible) return EMPTY_PIXEL;
   if (x < 0) return EMPTY_PIXEL;
   if (y < 0) return EMPTY_PIXEL;
   if ((size_t) x > this->width) return EMPTY_PIXEL;
@@ -241,14 +248,14 @@ Point Sprite::wrap_edge(double x, double y) {
         || (y + this->height > ymax && this->direction < 180)) {
       this->speed = 0;
     }
-  } else if (this->edge_behavior == DISAPPEAR) {
-    if (x + this->width < 0 || std::round(x) > xmax
-        || y + this->height < 0 || std::round(y) > ymax) {
-      this->invisible = true;
-    } else {
-      this->invisible = false;
-    }
+  } //else if (this->edge_behavior == DISAPPEAR) {
+  if (x + this->width < 0 || std::round(x) > xmax
+      || y + this->height < 0 || std::round(y) > ymax) {
+    this->out_of_bounds = true;
+  } else {
+    this->out_of_bounds = false;
   }
+  // }
   return Point(x, y);
 }
 

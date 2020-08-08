@@ -219,7 +219,9 @@ cdef class PySpriteAnimationLoop:
         del self.c_sal
 
     def start(self):
+        print("Starting Animation Loop")
         deref(self.c_sal).startLoop()
 
     def end(self):
+        print("Stopping Animation Loop")
         deref(self.c_sal).endLoop()
