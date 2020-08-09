@@ -27,9 +27,7 @@ static volatile bool INTERRUPT_RECEIVED = false;
 
 
 void animate(led_loop::SpriteAnimationLoop* animation) {
-  while (!INTERRUPT_RECEIVED) {
-    animation->doFrame();
-  }
+  animation->startLoop();
 }
 void dostuff(SpriteList* sprites, std::mutex* sprites_mutex) {
   Sprite* werder = (*sprites)["werder"];
@@ -75,7 +73,8 @@ int main(int argc, char *argv[]) {
   led_loop::SpriteAnimationLoop animation(
       matrix, sprites, &sprites_mutex, &(options->loop));
 
-  Sprite* werder = new Sprite("werder", "sprites/clubs/bremen42.png");
+  Sprite* werder = new Sprite("sprites/clubs/bremen42.png");
+  werder->setID("werder");
   werder->setPosition(Sprites::Point(10, 10));
   werder->setDirection(33.8);
   werder->setSpeed(0.5);
@@ -85,7 +84,7 @@ int main(int argc, char *argv[]) {
   std::thread worker_thread(dostuff, sprites, &sprites_mutex);
 
   animation_thread.join();
-  // worker_thread.join();
+  worker_thread.join();
 
   if (INTERRUPT_RECEIVED) {
     fprintf(stderr, "Caught interrupt signal. Exiting.\n");
