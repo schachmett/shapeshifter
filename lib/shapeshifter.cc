@@ -75,7 +75,8 @@ int main(int argc, char *argv[]) {
   led_loop::SpriteAnimationLoop animation(
       matrix, sprites, &sprites_mutex, &(options->loop));
 
-  Sprite* werder = new Sprite("werder", "sprites/clubs/bremen42.png");
+  Sprite* werder = new Sprite("sprites/clubs/bremen42.png");
+  werder->setID("werder");
   werder->setPosition(Sprites::Point(10, 10));
   werder->setDirection(33.8);
   werder->setSpeed(0.5);

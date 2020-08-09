@@ -95,11 +95,11 @@ cdef class PySprite:
 
     property ID:
         def __get__(self): return deref(self.c_spr).getID().decode("UTF-8")
-        # def __set__(self, str value): deref(self.c_spr).setID(pystr_to_chars(value))
+        def __set__(self, str value): deref(self.c_spr).setID(pystr_to_chars(value))
 
     property fname:
-        def __get__(self): return deref(self.c_spr).getFilename()
-        def __set__(self, str value): deref(self.c_spr).setFilename(value)
+        def __get__(self): return deref(self.c_spr).getSource()
+        def __set__(self, str value): deref(self.c_spr).setSource(value)
 
     property visible:
         def __get__(self): return deref(self.c_spr).getVisible()

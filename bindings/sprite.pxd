@@ -10,7 +10,7 @@ from libcpp.map cimport map as cmap
 cdef extern from "sprite.cc":
     pass
 cdef extern from "sprite.h" namespace "Sprites":
-    ctypedef string SpriteID
+    ctypedef string CanvasObjectID
 
     cdef struct Point:
         Point(double, double) except +
@@ -30,24 +30,20 @@ cdef extern from "sprite.h" namespace "Sprites":
         STOP = 5         # does not work fully (can still creep into edge)
         DISAPPEAR = 6
 
-    cdef cppclass Sprite:
-        Sprite() except +
-        Sprite(string) except +
-        Sprite(string, double) except +
+    cdef cppclass CanvasObject:
+        CanvasObject() except +
 
-        void setID(SpriteID)
-        const SpriteID getID() const
-        void setFilename(string)
-        const string getFilename() const
-        void setWidth(int)
+        void setID(CanvasObjectID)
+        const CanvasObjectID getID() const
         const int getWidth() const
-        void setHeight(int)
         const int getHeight() const
 
-        const Pixel getPixel(int, int) const
         void doStep()
+
         void setVisible(bool)
         bool getVisible() const
+        void setEdgeBehavior(const EdgeBehavior)
+        const EdgeBehavior getEdgeBehavior() const
 
         void setPosition(const Point)
         const Point getPosition() const
@@ -55,10 +51,20 @@ cdef extern from "sprite.h" namespace "Sprites":
         const double getDirection()
         void setSpeed(const double)
         const double getSpeed() const
-        void setEdgeBehavior(const EdgeBehavior)
-        const EdgeBehavior getEdgeBehavior() const
 
-    ctypedef cmap[SpriteID, Sprite*] SpriteList
+    cdef cppclass Sprite(CanvasObject):
+        Sprite() except +
+        Sprite(string) except +
+        Sprite(string, double) except +
+
+        void setSource(string)
+        const string getSource() const
+        void setWidth(int)
+        void setHeight(int)
+
+        const Pixel getPixel(int, int) const
+
+    ctypedef cmap[CanvasObjectID, Sprite*] SpriteList
 
 
 cdef class PySprite:
