@@ -6,7 +6,7 @@ from libcpp cimport bool
 from cython.operator cimport dereference as deref
 from cython.operator cimport address
 
-# from .sprite cimport Point, Sprite, SpriteList, EdgeBehavior
+# from .sprite cimport Point, Sprite, CanvasObjectList, EdgeBehavior
 from .utility cimport pystr_to_chars, cstr_to_pystr
 from .magick cimport InitializeMagick
 
@@ -17,8 +17,8 @@ from .magick cimport InitializeMagick
 InitializeMagick(NULL)
 
 
-cdef class PySpriteList:
-    # cdef SpriteList c_sprl
+cdef class PyCanvasObjectList:
+    # cdef CanvasObjectList c_sprl
     # cdef py_sprites
 
     def __cinit__(self, **dict_of_pysprites):
@@ -95,11 +95,11 @@ cdef class PySprite:
 
     property ID:
         def __get__(self): return deref(self.c_spr).getID().decode("UTF-8")
-        # def __set__(self, str value): deref(self.c_spr).setID(pystr_to_chars(value))
+        def __set__(self, str value): deref(self.c_spr).setID(pystr_to_chars(value))
 
     property fname:
-        def __get__(self): return deref(self.c_spr).getFilename()
-        def __set__(self, str value): deref(self.c_spr).setFilename(value)
+        def __get__(self): return deref(self.c_spr).getSource()
+        def __set__(self, str value): deref(self.c_spr).setSource(value)
 
     property visible:
         def __get__(self): return deref(self.c_spr).getVisible()

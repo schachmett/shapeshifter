@@ -3,7 +3,7 @@
 # cython: language_level=3
 """
 Wrappers for RGBMatrix, Options (contains RGBMatrix::Options and RuntimeOptions)
-and the SpriteAnimationLoop that writes to the matrix.
+and the AnimationLoop that writes to the matrix.
 These can not be in separate files, because every FrameCanvas of the RGBMatrix
 holds a Framebuffer, and the static class variable
 Framebuffer::hardware_mapping_ is only visible inside the same module.
@@ -14,10 +14,10 @@ from cython.operator cimport dereference as deref
 from libcpp cimport bool
 from libc.stdint cimport uint8_t, uint32_t, uintptr_t
 
-from .sprite cimport PySpriteList
+from .sprite cimport PyCanvasObjectList
 # These are automatically imported from $0.pxd
 # from .loop cimport (
-#     SpriteAnimationLoop, LoopOptions,
+#     AnimationLoop, LoopOptions,
 #     Options, RuntimeOptions, RGBMatrix, FrameCanvas
 # )
 
@@ -200,16 +200,16 @@ cdef class PanelOptions:
         def __set__(self, uint8_t value): self.__rt_options.drop_privileges = value
 
 
-cdef class PySpriteAnimationLoop:
-    cdef SpriteAnimationLoop* c_sal
+cdef class PyAnimationLoop:
+    cdef AnimationLoop* c_sal
     cdef PyRGBPanel rgb
 
-    def __cinit__(self, PySpriteList sprites, **options):
+    def __cinit__(self, PyCanvasObjectList sprites, **options):
         cdef LoopOptions cl_options = LoopOptions()
         if "frame_time_ms" in options:
             cl_options.frame_time_ms = options.pop("frame_time_ms")
         self.rgb = PyRGBPanel(**options)
-        self.c_sal = new SpriteAnimationLoop(
+        self.c_sal = new AnimationLoop(
             self.rgb.__matrix,
             &sprites.c_sprl,
             &cl_options
