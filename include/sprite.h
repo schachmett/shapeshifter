@@ -7,6 +7,9 @@
 #include <Magick++.h>
 #include <magick/image.h>
 
+#include "led-matrix.h"
+#include "graphics.h"
+
 namespace Sprites {
 
   enum EdgeBehavior {
@@ -51,13 +54,13 @@ namespace Sprites {
   class CanvasObject {
   public:
     CanvasObject();
-    virtual ~CanvasObject(); // = 0;
+    virtual ~CanvasObject();
 
     virtual void setID(CanvasObjectID);
     virtual const CanvasObjectID& getID() const;
     virtual void setVisible(bool visible);
     virtual bool getVisible() const;
-    virtual bool getWrapped();
+    virtual bool getWrapped() const;
     virtual void setEdgeBehavior(const EdgeBehavior edge_behavior);
     virtual const EdgeBehavior& getEdgeBehavior() const;
 
@@ -69,13 +72,7 @@ namespace Sprites {
     virtual const size_t& getHeight() const;
 
     virtual void doStep();
-
-    virtual void setPixel(const int x, const int y,
-                          const char r, const char g, const char b);
-    virtual void setPixel(const ColoredPixel* cpixel);
-    virtual void setPixel(const Point* point, const Pixel* pixel);
-    virtual void setPixel(const int x, const int y, const Pixel* pixel); // = 0;
-    virtual const Pixel& getPixel(const int x, const int y) const; // = 0;
+    virtual void draw(rgb_matrix::FrameCanvas* canvas) const; // = 0;
 
     virtual void setPosition(const Point p);
     virtual void addToPosition(const Point p);
@@ -117,31 +114,60 @@ namespace Sprites {
   class Sprite : public CanvasObject {
   public:
     Sprite();
-    Sprite(const char* filename);
-    Sprite(const char* filename, const double resize_factor);
+    Sprite(const std::string filename, const double resize_factor = 1.0);
     ~Sprite();
 
-    void setSource(const std::string filename);
+    void setSource(const std::string filename, const double resize_factor = 1.0);
     const std::string& getSource() const;
     void setWidth(int width);
     void setHeight(int height);
 
+    void setPixel(const int x, const int y,
+                  const char r, const char g, const char b);
+    void setPixel(const ColoredPixel* cpixel);
+    void setPixel(const Point* point, const Pixel* pixel);
     void setPixel(const int x, const int y, const Pixel* pixel);
     const Pixel& getPixel(const int x, const int y) const;
+    virtual void draw(rgb_matrix::FrameCanvas* canvas) const;
 
   protected:
     void loadMatrix(const PixelMatrix mat);
     void loadMatrix(const std::string filename, double resize_factor = 1.0);
-    Point wrap_edge(double x, double y);
 
     std::string filename;
     PixelMatrix matrix;
     double resize_factor;
   };
 
-  typedef std::map<CanvasObjectID, Sprite*> SpriteList;
+  class Text : public CanvasObject {
+  public:
+    Text();
+    Text(const std::string fontfilename, const std::string content = "",
+         const int kerning = 0);
+    ~Text();
+
+    void setSource(const std::string fontfilename, const int kerning = 0);
+    const std::string& getSource() const;
+    // void setWidth(int width);   // not implemented
+    // void setHeight(int height); // not implemented
+
+    void setText(std::string content);
+    const std::string& getText() const;
+    void setKerning(const int kerning);
+    const int& getKerning() const;
+    void draw(rgb_matrix::FrameCanvas* canvas) const;
+
+  protected:
+    void loadFont(const std::string fontfilename);
+
+    rgb_matrix::Font font;
+    rgb_matrix::Color color;
+    std::string fontfilename;
+    std::string text;
+    int kerning;
+  };
+
   typedef std::map<CanvasObjectID, CanvasObject*> CanvasObjectList;
-  // typedef std::vector<Sprite*>::iterator SpriteIterator;
 
 } // end namespace Sprites
 

@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from bindings import (
-    PySprite, PySpriteList, PySpriteAnimationLoop#, EdgeBehavior
+    PySprite, PyCanvasObjectList, PyAnimationLoop#, EdgeBehavior
 )
 
 URL = "http://newsfeed.zeit.de/index"
@@ -19,7 +19,7 @@ URL = "http://newsfeed.zeit.de/index"
 
 def main():
     rss = RSS(URL)
-    sprites = PySpriteList()
+    sprites = PyCanvasObjectList()
     for i in range(len(rss.feed.entries)):
         entry_dict = rss.parse_entry(i)
         img_fname = rss.load_img_url(entry_dict["img_url"])
@@ -29,7 +29,7 @@ def main():
         sprite.visible = False
         sprites[str(i)] = sprite
 
-    animation = PySpriteAnimationLoop(sprites, frame_time_ms=20)
+    animation = PyAnimationLoop(sprites, frame_time_ms=20)
     animation.start()
     try:
         active_idx = 0

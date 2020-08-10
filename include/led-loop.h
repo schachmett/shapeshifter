@@ -20,38 +20,35 @@ namespace led_loop {
     tmillis_t frame_time_ms;
   };
 
-  class SpriteAnimationLoop {
+  class AnimationLoop {
     public:
-      SpriteAnimationLoop();
-      SpriteAnimationLoop(rgb_matrix::RGBMatrix* matrix,
-                          Sprites::SpriteList* sprites,
-                          std::mutex* sprites_mutex,
-                          LoopOptions* options = nullptr);
-      SpriteAnimationLoop(rgb_matrix::RGBMatrix* matrix,
-                          Sprites::SpriteList* sprites,
-                          LoopOptions* options = nullptr);
-      ~SpriteAnimationLoop();
+      AnimationLoop();
+      AnimationLoop(rgb_matrix::RGBMatrix* matrix,
+                    Sprites::CanvasObjectList* canvas_objects,
+                    LoopOptions* options = nullptr,
+                    std::mutex* data_mutex = nullptr);
+      ~AnimationLoop();
       void startLoop();
       const std::thread& getThread() const;
       void endLoop();
 
       void prepareFrame();
       void doFrame();
-      void drawSprite(Sprites::Sprite* sprite);
 
-      void lock_sprites();
-      void unlock_sprites();
-      void setMutex(std::mutex* sprites_mutex);
+      void lock_canvas_objects();
+      void unlock_canvas_objects();
+      void setMutex(std::mutex* data_mutex);
       std::mutex* getMutex() const;
       rgb_matrix::FrameCanvas* getCanvas();
     private:
       void animation_loop();
-      std::mutex* sprites_mutex;
+
+      std::mutex* data_mutex;
       volatile bool is_running;
       std::thread animation_thread;
       rgb_matrix::RGBMatrix* matrix;
       rgb_matrix::FrameCanvas* canvas;
-      Sprites::SpriteList* sprites;
+      Sprites::CanvasObjectList* canvas_objects;
       tmillis_t frame_time_ms;
   };
 

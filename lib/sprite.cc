@@ -4,6 +4,9 @@
 #include <Magick++.h>
 #include <magick/image.h>
 
+#include "led-matrix.h"
+#include "graphics.h"
+
 #include "sprite.h"
 
 
@@ -79,8 +82,20 @@ CanvasObject::~CanvasObject() { }
 
 void CanvasObject::setID(CanvasObjectID id) { this->id = id; }
 const CanvasObjectID& CanvasObject::getID() const { return this->id; }
-const size_t& CanvasObject::getHeight() const { return this->height; }
+void CanvasObject::setWidth(int width) {
+  throw std::logic_error("CanvasObject is abstract!");
+}
 const size_t& CanvasObject::getWidth() const { return this->width; }
+void CanvasObject::setHeight(int height) {
+  throw std::logic_error("CanvasObject is abstract!");
+}
+const size_t& CanvasObject::getHeight() const { return this->height; }
+void CanvasObject::setSource(const std::string filename) {
+  throw std::logic_error("CanvasObject is abstract!");
+}
+const std::string& CanvasObject::getSource() const {
+  throw std::logic_error("CanvasObject is abstract!");
+}
 
 // Data regarding the sprite's behavior and status at the edge
 void CanvasObject::setVisible(bool visible) { this->visible = visible; }
@@ -88,25 +103,12 @@ bool CanvasObject::getVisible() const {
   if (this->out_of_bounds) return false;
   return this->visible;
 }
-bool CanvasObject::getWrapped() { return this->wrapped; }
+bool CanvasObject::getWrapped() const { return this->wrapped; }
 void CanvasObject::setEdgeBehavior(EdgeBehavior edge_behavior) {
   this->edge_behavior = edge_behavior;
 }
 const EdgeBehavior& CanvasObject::getEdgeBehavior() const {
   return this->edge_behavior;
-}
-
-void CanvasObject::setPixel(const ColoredPixel* cpixel) {
-  this->setPixel(&cpixel->point, &cpixel->pixel);
-}
-void CanvasObject::setPixel(const Point* point, const Pixel* pixel) {
-  this->setPixel(point->x, point->y, pixel);
-}
-void CanvasObject::setPixel(const int x, const int y,
-                            const char r, const char g, const char b) {
-  Pixel* pixel = new Pixel(r, g, b);
-  this->setPixel(x, y, pixel);
-  delete pixel;   // is this correct?
 }
 
 // The position on the panel
@@ -154,6 +156,9 @@ void CanvasObject::doStep() {
   if (this->goal_steps == 0) this->speed = 0;
   if (this->goal_steps >= 0) --this->goal_steps;
 }
+void CanvasObject::draw(rgb_matrix::FrameCanvas* canvas) const {
+  throw std::logic_error("CanvasObject is abstract!");
+}
 Point CanvasObject::wrap_edge(double x, double y) {
   size_t xmax = this->max_dimensions.x;
   size_t ymax = this->max_dimensions.y;
@@ -194,16 +199,13 @@ Point CanvasObject::wrap_edge(double x, double y) {
 
 // Sprite constructor and Image loading / initialization
 Sprite::Sprite() : CanvasObject::CanvasObject(), matrix(), resize_factor(1.0) { }
-Sprite::Sprite(const char* filename) : Sprite() {
-  this->loadMatrix(filename);
-}
-Sprite::Sprite(const char* filename, const double resize_factor) {
-  this->loadMatrix(filename);
+Sprite::Sprite(const std::string filename, const double resize_factor) {
+  this->loadMatrix(filename, resize_factor);
 }
 Sprite::~Sprite() { }
 
-void Sprite::setSource(const std::string filename) {
-  this->loadMatrix(filename, 1.0);
+void Sprite::setSource(const std::string filename, const double resize_factor) {
+  this->loadMatrix(filename, resize_factor);
 }
 const std::string& Sprite::getSource() const {
   return this->filename;
@@ -217,7 +219,20 @@ void Sprite::setHeight(const int height) {
   this->loadMatrix(this->filename, new_resize);
 }
 
+// Non-interface methods
 // Get drawing data
+void Sprite::setPixel(const ColoredPixel* cpixel) {
+  this->setPixel(cpixel->point.x, cpixel->point.y, &cpixel->pixel);
+}
+void Sprite::setPixel(const Point* point, const Pixel* pixel) {
+  this->setPixel(point->x, point->y, pixel);
+}
+void Sprite::setPixel(const int x, const int y,
+                      const char r, const char g, const char b) {
+  Pixel* pixel = new Pixel(r, g, b);
+  this->setPixel(x, y, pixel);
+  delete pixel;   // is this correct?
+}
 void Sprite::setPixel(const int x, const int y, const Pixel* pixel) {
   this->matrix[y][x] = *pixel;
 }
@@ -231,8 +246,26 @@ const Pixel& Sprite::getPixel(const int x, const int y) const {
   const Pixel& pixel = this->matrix[y][x];
   return pixel;
 }
+void Sprite::draw(rgb_matrix::FrameCanvas* canvas) const {
+  if (!this->getVisible()) return;
+  int x0 = std::round(this->getPosition().x);
+  int y0 = std::round(this->getPosition().y);
+  for (size_t img_y = 0; img_y < this->getHeight(); ++img_y) {
+    for (size_t img_x = 0; img_x < this->getWidth(); ++img_x) {
+      const Pixel p = this->getPixel(img_x, img_y);
+      if (p.red == 0 and p.green == 0 and p.blue == 0) continue;  //slow?
+      int x = img_x + x0;
+      int y = img_y + y0;
+      if (this->getWrapped()) {
+        if (x > canvas->width())  x -= canvas->width();
+        if (y > canvas->height()) y -= canvas->height();
+      }
+      canvas->SetPixel(x, y, p.red, p.green, p.blue);
+    }
+  }
+}
 
-// Non-interface methods
+// Other non-interface methods
 void Sprite::loadMatrix(PixelMatrix mat) {
   this->matrix.swap(mat);
   this->height = this->matrix.size();
@@ -243,6 +276,55 @@ void Sprite::loadMatrix(const std::string filename, double resize_factor) {
   this->loadMatrix(mat);
   this->resize_factor = resize_factor;
   this->filename = filename;
+}
+
+
+
+Text::Text() : CanvasObject(), font(), color(255, 255, 255),
+               fontfilename(""), text(""), kerning(0) { }
+Text::Text(const std::string fontfilename, const std::string content,
+           const int kerning) {
+  this->setSource(fontfilename, kerning);
+  this->setText(content);
+}
+Text::~Text() { }
+
+void Text::setSource(const std::string fontfilename, const int kerning) {
+  this->loadFont(fontfilename);
+  this->setKerning(kerning);
+}
+const std::string& Text::getSource() const {
+  return this->fontfilename;
+}
+
+// Non-interface methods
+// Get drawing data
+void Text::setText(const std::string content) {
+  this->text = content;
+}
+const std::string& Text::getText() const {
+  return this->text;
+}
+void Text::setKerning(const int kerning) {
+  this->kerning = kerning;
+}
+const int& Text::getKerning() const {
+  return this->kerning;
+}
+void Text::draw(rgb_matrix::FrameCanvas* canvas) const {
+  rgb_matrix::DrawText(canvas, this->font, this->position.x,
+                       this->position.y + this->font.baseline(),
+                       this->color, NULL, this->text.c_str(),
+                       this->kerning);
+}
+
+// Other non-interface methods
+void Text::loadFont(const std::string fontfilename) {
+  if (!this->font.LoadFont(fontfilename.c_str())) {
+    fprintf(stderr, "Couldn't load font '%s'\n", fontfilename.c_str());
+    return;
+  }
+  this->fontfilename = fontfilename;
 }
 
 

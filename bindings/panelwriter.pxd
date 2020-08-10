@@ -3,7 +3,7 @@ Bindings for the main loop that runs the panel animations.
 """
 
 # from .panel cimport RGBMatrix
-from .sprite cimport SpriteList
+from .sprite cimport CanvasObjectList
 
 from libcpp cimport bool
 from libc.stdint cimport uint8_t, uint32_t
@@ -90,7 +90,7 @@ cdef extern from "led-loop.h" namespace "led_loop":
         LoopOptions() except +
         tmillis_t frame_time_ms
 
-    cdef cppclass SpriteAnimationLoop:
-        SpriteAnimationLoop(RGBMatrix*, SpriteList*, LoopOptions*) except +
+    cdef cppclass AnimationLoop:
+        AnimationLoop(RGBMatrix*, CanvasObjectList*, LoopOptions*) except +
         void startLoop()
         void endLoop()

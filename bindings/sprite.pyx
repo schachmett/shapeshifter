@@ -6,7 +6,7 @@ from libcpp cimport bool
 from cython.operator cimport dereference as deref
 from cython.operator cimport address
 
-# from .sprite cimport Point, Sprite, SpriteList, EdgeBehavior
+# from .sprite cimport Point, Sprite, CanvasObjectList, EdgeBehavior
 from .utility cimport pystr_to_chars, cstr_to_pystr
 from .magick cimport InitializeMagick
 
@@ -17,8 +17,8 @@ from .magick cimport InitializeMagick
 InitializeMagick(NULL)
 
 
-cdef class PySpriteList:
-    # cdef SpriteList c_sprl
+cdef class PyCanvasObjectList:
+    # cdef CanvasObjectList c_sprl
     # cdef py_sprites
 
     def __cinit__(self, **dict_of_pysprites):

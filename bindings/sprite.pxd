@@ -64,7 +64,7 @@ cdef extern from "sprite.h" namespace "Sprites":
 
         const Pixel getPixel(int, int) const
 
-    ctypedef cmap[CanvasObjectID, Sprite*] SpriteList
+    ctypedef cmap[CanvasObjectID, CanvasObject*] CanvasObjectList
 
 
 cdef class PySprite:
@@ -75,6 +75,6 @@ cdef class PySprite:
     cdef PySprite from_ptr(Sprite*, bool owner=*)
 
 
-cdef class PySpriteList:
-    cdef SpriteList c_sprl
+cdef class PyCanvasObjectList:
+    cdef CanvasObjectList c_sprl
     cdef py_sprites
