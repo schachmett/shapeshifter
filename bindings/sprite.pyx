@@ -36,8 +36,8 @@ cdef class PyCanvasObjectList:
         if self.c_sprl.find(pystr_to_chars(key)) != self.c_sprl.end():
             print("overwriting")
         cv_obj.ID = key
-        cdef CanvasObject c_cvo = cv_obj._wrapped_CVO()
-        self.c_sprl[pystr_to_chars(key)] = &c_cvo
+        cdef CanvasObject* c_cvo = cv_obj._wrapped_CVO()
+        self.c_sprl[pystr_to_chars(key)] = c_cvo
         # cdef Sprite c_spr = cv_obj._wrapped;
         # cdef Text c_txt;
         # if isinstance(cv_obj, PySprite):
@@ -91,10 +91,6 @@ cdef class PyCanvasObjectList:
 
 
 cdef class PyCanvasObject:
-    # cdef CanvasObject* c_cvo
-    # cdef bool _ptr_owner
-    # cdef bool _is_initialized
-
     def __cinit__(self, *args, **kwargs):
         self._is_initialized = False
         self._ptr_owner = True
@@ -106,16 +102,21 @@ cdef class PyCanvasObject:
         if self._ptr_owner:
             del self.c_cvo
 
-    cdef CanvasObject _wrapped_CVO(self):
-        return deref(self.c_cvo)
+    cdef CanvasObject* _wrapped_CVO(self):
+        return self.c_cvo
+
+    property position:
+        def __get__(self):
+            p = deref(self._wrapped_CVO()).getPosition()
+            return p.x, p.y
+        def __set__(self, (double, double) value):
+            cdef Point p
+            p.x, p.y = value[0], value[1]
+            self._wrapped_CVO().setPosition(p)
 
 
 
 cdef class PySprite(PyCanvasObject):
-    # cdef Sprite* c_spr
-    # cdef bool _ptr_owner
-    # cdef bool _is_initialized
-
     def __cinit__(self, str fname):
         if fname == "":
             self._is_initialized = False
@@ -131,11 +132,11 @@ cdef class PySprite(PyCanvasObject):
         if self._ptr_owner:
             del self.c_spr
 
-    cdef Sprite _wrapped(self):
-        return deref(self.c_spr)
+    cdef Sprite* _wrapped(self):
+        return self.c_spr
 
-    cdef CanvasObject _wrapped_CVO(self):
-        return deref(self.c_spr)
+    cdef CanvasObject* _wrapped_CVO(self):
+        return self.c_spr
 
     @staticmethod
     cdef PySprite from_ptr(Sprite* sprite, bool owner=False):
@@ -173,14 +174,15 @@ cdef class PySprite(PyCanvasObject):
         def __get__(self): return self._wrapped().getHeight()
         def __set__(self, int value): self._wrapped().setHeight(value)
 
-    property position:
-        def __get__(self):
-            p = self._wrapped().getPosition()
-            return p.x, p.y
-        def __set__(self, (double, double) value):
-            cdef Point p
-            p.x, p.y = value[0], value[1]
-            self._wrapped().setPosition(p)
+    # property position:
+    #     def __get__(self):
+    #         p = self._wrapped().getPosition()
+    #         return p.x, p.y
+    #     def __set__(self, (double, double) value):
+    #         cdef Point p
+    #         p.x, p.y = value[0], value[1]
+    #         self.c_spr.setPosition(p)
+    #         # self._wrapped().setPosition(p)
 
     property direction:
         def __get__(self): return self._wrapped().getDirection()
@@ -208,10 +210,6 @@ cdef class PySprite(PyCanvasObject):
 
 
 cdef class PyText(PyCanvasObject):
-    # cdef Text* c_txt
-    # cdef bool _ptr_owner
-    # cdef bool _is_initialized
-
     def __cinit__(self, str text):
         if text == "":
             self._is_initialized = False
@@ -231,8 +229,8 @@ cdef class PyText(PyCanvasObject):
     cdef Text _wrapped(self):
         return deref(self.c_txt)
 
-    cdef CanvasObject _wrapped_CVO(self):
-        return deref(self.c_txt)
+    cdef CanvasObject* _wrapped_CVO(self):
+        return self.c_txt
 
     @staticmethod
     cdef PyText from_ptr(Text* text, bool owner=False):
@@ -256,7 +254,7 @@ cdef class PyText(PyCanvasObject):
 
     property fname:
         def __get__(self): return self._wrapped().getSource()
-        def __set__(self, str value): self._wrapped().setSource(value, 0)
+        def __set__(self, str value): self._wrapped().setSource(value)
 
     property visible:
         def __get__(self): return self._wrapped().getVisible()
@@ -270,14 +268,14 @@ cdef class PyText(PyCanvasObject):
         def __get__(self): return self._wrapped().getHeight()
         # def __set__(self, int value): self._wrapped().setHeight(value)
 
-    property position:
-        def __get__(self):
-            p = self._wrapped().getPosition()
-            return p.x, p.y
-        def __set__(self, (double, double) value):
-            cdef Point p
-            p.x, p.y = value[0], value[1]
-            self._wrapped().setPosition(p)
+    # property position:
+    #     def __get__(self):
+    #         p = self._wrapped().getPosition()
+    #         return p.x, p.y
+    #     def __set__(self, (double, double) value):
+    #         cdef Point p
+    #         p.x, p.y = value[0], value[1]
+    #         self._wrapped().setPosition(p)
 
     property direction:
         def __get__(self): return self._wrapped().getDirection()

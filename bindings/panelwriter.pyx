@@ -208,16 +208,12 @@ cdef class PyAnimationLoop:
         if "frame_time_ms" in options:
             cl_options.frame_time_ms = options.pop("frame_time_ms")
         self.rgb = PyRGBPanel(**options)
-        print("hi")
         self.c_sprl = &sprites.c_sprl
-        print(self.c_sprl.size())
         self.c_sal = new AnimationLoop(
             self.rgb.__matrix,
             self.c_sprl,
             &cl_options
         )
-        print(self.c_sprl.size())
-        print(deref(self.c_sprl.at(pystr_to_chars("dorie"))).getPosition().x)
 
     def __dealloc__(self):
         del self.c_sal

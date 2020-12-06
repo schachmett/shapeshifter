@@ -121,6 +121,8 @@ namespace Sprites {
     const std::string& getSource() const;
     void setWidth(int width);
     void setHeight(int height);
+    void setResize(double resize_factor);
+    const double& getResize() const;
 
     void setPixel(const int x, const int y,
                   const char r, const char g, const char b);
@@ -146,14 +148,14 @@ namespace Sprites {
          const int kerning = 0);
     ~Text();
 
-    void setSource(const std::string fontfilename, const int kerning = 0);
+    void setSource(const std::string filename);
     const std::string& getSource() const;
     // void setWidth(int width);   // not implemented
     // void setHeight(int height); // not implemented
 
     void setText(std::string content);
     const std::string& getText() const;
-    void setKerning(const int kerning);
+    void setKerning(const float kerning);
     const int& getKerning() const;
     void draw(rgb_matrix::FrameCanvas* canvas) const;
 

@@ -210,6 +210,12 @@ void Sprite::setSource(const std::string filename, const double resize_factor) {
 const std::string& Sprite::getSource() const {
   return this->filename;
 }
+void Sprite::setResize(double resize_factor) {
+  this->loadMatrix(this->filename, resize_factor);
+}
+const double& Sprite::getResize() const {
+  return this->resize_factor;
+}
 void Sprite::setWidth(int width) {
   double new_resize = width / (this->width / this->resize_factor);
   this->loadMatrix(this->filename, new_resize);
@@ -260,7 +266,6 @@ void Sprite::draw(rgb_matrix::FrameCanvas* canvas) const {
         if (x > canvas->width())  x -= canvas->width();
         if (y > canvas->height()) y -= canvas->height();
       }
-      fprintf(stderr, "%d\n", p.red);
       canvas->SetPixel(x, y, p.red, p.green, p.blue);
     }
   }
@@ -281,21 +286,22 @@ void Sprite::loadMatrix(const std::string filename, double resize_factor) {
 
 
 
-Text::Text() : CanvasObject(), color(255, 255, 255),
+Text::Text() : CanvasObject::CanvasObject(), color(255, 255, 255),
                fontfilename(""), text(""), kerning(0) { }
 Text::Text(const std::string fontfilename, const std::string content,
-           const int kerning) {
+           const int kerning) : Text() {
+  fprintf(stderr, "%d\n", this->color.r);
   this->font = new rgb_matrix::Font;
-  this->setSource(fontfilename, kerning);
+  this->setSource(fontfilename);
+  this->setKerning(kerning);
   this->setText(content);
 }
 Text::~Text() {
   // delete this->font;   // Leads to a double free() ??
 }
 
-void Text::setSource(const std::string fontfilename, const int kerning) {
-  this->loadFont(fontfilename);
-  this->setKerning(kerning);
+void Text::setSource(const std::string filename) {
+  this->loadFont(filename);
 }
 const std::string& Text::getSource() const {
   return this->fontfilename;
@@ -309,8 +315,8 @@ void Text::setText(const std::string content) {
 const std::string& Text::getText() const {
   return this->text;
 }
-void Text::setKerning(const int kerning) {
-  this->kerning = kerning;
+void Text::setKerning(const float kerning) {
+  this->kerning = (int)kerning;
 }
 const int& Text::getKerning() const {
   return this->kerning;

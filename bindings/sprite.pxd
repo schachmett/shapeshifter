@@ -38,6 +38,9 @@ cdef extern from "sprite.h" namespace "Sprites":
         const int getWidth() const
         const int getHeight() const
 
+        void setSource(string)
+        const string getSource() const
+
         void doStep()
 
         void setVisible(bool)
@@ -57,8 +60,8 @@ cdef extern from "sprite.h" namespace "Sprites":
         Sprite(string) except +
         Sprite(string, double) except +
 
-        void setSource(string)
-        const string getSource() const
+        # void setSource(string)
+        # const string getSource() const
         void setWidth(int)
         void setHeight(int)
 
@@ -69,8 +72,8 @@ cdef extern from "sprite.h" namespace "Sprites":
         Text(string) except +
         Text(string, string) except +
 
-        void setSource(string, int)
-        const string getSource() const
+        # void setSource(string, int)
+        # const string getSource() const
         void setText(string)
         const string getText() const
         void setKerning(int)
@@ -82,20 +85,20 @@ cdef class PyCanvasObject:
     cdef CanvasObject* c_cvo
     cdef bool _ptr_owner
     cdef bool _is_initialized
-    cdef CanvasObject _wrapped_CVO(self)
+    cdef CanvasObject* _wrapped_CVO(self)
 
 cdef class PySprite(PyCanvasObject):
     cdef Sprite* c_spr
     @staticmethod
     cdef PySprite from_ptr(Sprite*, bool owner=*)
-    cdef CanvasObject _wrapped_CVO(self)
-    cdef Sprite _wrapped(self)
+    cdef CanvasObject* _wrapped_CVO(self)
+    cdef Sprite* _wrapped(self)
 
 cdef class PyText(PyCanvasObject):
     cdef Text* c_txt
     @staticmethod
     cdef PyText from_ptr(Text*, bool owner=*)
-    cdef CanvasObject _wrapped_CVO(self)
+    cdef CanvasObject* _wrapped_CVO(self)
     cdef Text _wrapped(self)
 
 
