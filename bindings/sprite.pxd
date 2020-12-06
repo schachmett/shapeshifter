@@ -64,15 +64,39 @@ cdef extern from "sprite.h" namespace "Sprites":
 
         const Pixel getPixel(int, int) const
 
+    cdef cppclass Text(CanvasObject):
+        Text() except +
+        Text(string) except +
+        Text(string, string) except +
+
+        void setSource(string, int)
+        const string getSource() const
+        void setText(string)
+        const string getText() const
+        void setKerning(int)
+        const int getKerning() const
+
     ctypedef cmap[CanvasObjectID, CanvasObject*] CanvasObjectList
 
-
-cdef class PySprite:
-    cdef Sprite* c_spr
+cdef class PyCanvasObject:
+    cdef CanvasObject* c_cvo
     cdef bool _ptr_owner
     cdef bool _is_initialized
+    cdef CanvasObject _wrapped_CVO(self)
+
+cdef class PySprite(PyCanvasObject):
+    cdef Sprite* c_spr
     @staticmethod
     cdef PySprite from_ptr(Sprite*, bool owner=*)
+    cdef CanvasObject _wrapped_CVO(self)
+    cdef Sprite _wrapped(self)
+
+cdef class PyText(PyCanvasObject):
+    cdef Text* c_txt
+    @staticmethod
+    cdef PyText from_ptr(Text*, bool owner=*)
+    cdef CanvasObject _wrapped_CVO(self)
+    cdef Text _wrapped(self)
 
 
 cdef class PyCanvasObjectList:

@@ -160,7 +160,7 @@ namespace Sprites {
   protected:
     void loadFont(const std::string fontfilename);
 
-    rgb_matrix::Font font;
+    rgb_matrix::Font* font;
     rgb_matrix::Color color;
     std::string fontfilename;
     std::string text;

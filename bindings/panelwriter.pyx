@@ -22,6 +22,8 @@ from .sprite cimport PyCanvasObjectList
 # )
 
 
+from .utility cimport pystr_to_chars, cstr_to_pystr
+
 cdef class PyRGBPanel:
     def __cinit__(self, PanelOptions options=None, **kw_options):
         if options == None:
@@ -201,19 +203,21 @@ cdef class PanelOptions:
 
 
 cdef class PyAnimationLoop:
-    cdef AnimationLoop* c_sal
-    cdef PyRGBPanel rgb
-
     def __cinit__(self, PyCanvasObjectList sprites, **options):
         cdef LoopOptions cl_options = LoopOptions()
         if "frame_time_ms" in options:
             cl_options.frame_time_ms = options.pop("frame_time_ms")
         self.rgb = PyRGBPanel(**options)
+        print("hi")
+        self.c_sprl = &sprites.c_sprl
+        print(self.c_sprl.size())
         self.c_sal = new AnimationLoop(
             self.rgb.__matrix,
-            &sprites.c_sprl,
+            self.c_sprl,
             &cl_options
         )
+        print(self.c_sprl.size())
+        print(deref(self.c_sprl.at(pystr_to_chars("dorie"))).getPosition().x)
 
     def __dealloc__(self):
         del self.c_sal

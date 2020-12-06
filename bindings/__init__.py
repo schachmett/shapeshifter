@@ -8,5 +8,5 @@ __version__ = "0.0.1"
 __author__ = "Simon Fischer <sf@simon-fischer.info>"
 
 
-from .sprite import PySprite, PyCanvasObjectList, EdgeBehavior
+from .sprite import PySprite, PyText, PyCanvasObjectList, EdgeBehavior
 from .panelwriter import PyAnimationLoop, PyRGBPanel, PanelOptions

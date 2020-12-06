@@ -11,7 +11,7 @@ BLUE        :=  $(shell tput setaf 12)
 # Use $(2) to indicate what is being done (default: Compiling)
 # see also http://www.lunderberg.com/2015/08/25/cpp-makefile-pretty-output/
 define run_and_test
-  printf "$(BLUE)$(if $(2),$(2),Compiling) $@$(NORMFONT)...\r";          \
+  printf "$(BLUE)$(if $(2),$(2),Compiling) $@$(NORMFONT)...\r";          		\
   $(1) 2> $@.log;                                                           \
   RESULT=$$?;                                                               \
   if [ $$RESULT -ne 0 ]; then                                               \
@@ -24,7 +24,7 @@ define run_and_test
 			"$(YELLOW)[WARNING]$(NORMFONT)\n"; 																		\
   else                                                                      \
     printf "%-70b%b" 																												\
-		"$(BLUE)$(if $(2),$(2),Compiling) $@" 																\
+		"$(BLUE)$(if $(2),$(2),Compiling) $@" 																	\
 		"$(GREEN)[OK]$(NORMFONT)\n"; 																						\
   fi;                                                                       \
   cat $@.log;                                                               \

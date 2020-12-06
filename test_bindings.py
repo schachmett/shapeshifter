@@ -6,7 +6,7 @@ import time
 import random
 
 from bindings import (
-    PySprite, PySpriteList, PySpriteAnimationLoop, EdgeBehavior
+    PySprite, PyCanvasObjectList, PyAnimationLoop, EdgeBehavior
 )
 
 def main():
@@ -19,7 +19,7 @@ def main():
     # sprite.print_status()
     random.seed()
 
-    slist = PySpriteList(
+    slist = PyCanvasObjectList(
         bremen=PySprite("sprites/clubs/bremen42.png"),
         # bremen=PySprite(
         #     "http://www.httpvshttps.com/check.png?15962028684488_6"
@@ -32,7 +32,7 @@ def main():
     bremen.direction = 30
     bremen.speed = 1
     bremen.edge_behavior = EdgeBehavior.LOOP_INDIRECT
-    animation = PySpriteAnimationLoop(
+    animation = PyAnimationLoop(
         slist,
         frame_time_ms=10,
         pwm_dither_bits=1,

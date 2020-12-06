@@ -36,6 +36,8 @@ AnimationLoop::AnimationLoop(rgb_matrix::RGBMatrix* matrix,
   this->matrix = matrix;
   this->canvas = this->matrix->CreateFrameCanvas();
   this->canvas_objects = canvas_objects;
+  // std::string d = "dorie";
+  // fprintf(stderr, "%f\n", this->canvas_objects->at(d)->getPosition().x);
   if (data_mutex != nullptr) {
     this->data_mutex = data_mutex;
   } else {
@@ -54,6 +56,8 @@ AnimationLoop::~AnimationLoop() {
 
 void AnimationLoop::startLoop() {
   this->is_running = true;
+  std::string d = "dorie";
+  fprintf(stderr, "%f\n", this->canvas_objects->at(d)->getPosition().x);
   this->animation_thread = std::thread(&AnimationLoop::animation_loop, this);
 }
 const std::thread& AnimationLoop::getThread() const {
@@ -74,8 +78,13 @@ void AnimationLoop::endLoop() {
 void AnimationLoop::prepareFrame() {
   this->canvas->Clear();
   std::lock_guard<std::mutex> guard(*(this->data_mutex));
+  puts("acquired lock");
+  std::string d = "dorie";
+  fprintf(stderr, "%f\n", this->canvas_objects->at(d)->getPosition().x);
   for (auto &sprite_pair : *(this->canvas_objects)) {
+    puts("getting sprite");
     Sprites::CanvasObject* sprite = sprite_pair.second;
+    fprintf(stderr, "%f %f\n", sprite->getPosition().x, sprite->getPosition().y);
     sprite->doStep();
     sprite->draw(this->canvas);
   }

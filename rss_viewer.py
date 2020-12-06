@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from bindings import (
-    PySprite, PyCanvasObjectList, PyAnimationLoop#, EdgeBehavior
+    PySprite, PyText, PyCanvasObjectList, PyAnimationLoop#, EdgeBehavior
 )
 
 URL = "http://newsfeed.zeit.de/index"
@@ -20,14 +20,38 @@ URL = "http://newsfeed.zeit.de/index"
 def main():
     rss = RSS(URL)
     sprites = PyCanvasObjectList()
+    sprite = PySprite("sprites/dorie.png")
+    sprite.position = 20, 20
+    sprite.visible = True
+    sprites["dorie"] = sprite
+
+
+    animation = PyAnimationLoop(sprites, frame_time_ms=20)
+    
+    print(sprites["dorie"].fname)
+    animation.start()
+    try:
+        while True:
+            time.sleep(5)
+    except KeyboardInterrupt:
+        print("User interrupt")
+    finally:
+        animation.end()
+    return
+
     for i in range(len(rss.feed.entries)):
         entry_dict = rss.parse_entry(i)
         img_fname = rss.load_img_url(entry_dict["img_url"])
-        sprite = PySprite(img_fname)
-        sprite.height = 64
-        sprite.position = 0, 0
-        sprite.visible = False
-        sprites[str(i)] = sprite
+        if img_fname:
+            sprite = PySprite(img_fname)
+            sprite.height = 64
+            sprite.position = 0, 0
+            sprite.visible = False
+            sprites[f"img_{str(i)}"] = sprite
+        text = PyText("test")
+        text.position = 128, 32
+        text.visible = False
+        sprites[f"desc_{str(i)}"] = text
 
     animation = PyAnimationLoop(sprites, frame_time_ms=20)
     animation.start()
@@ -35,10 +59,14 @@ def main():
         active_idx = 0
         while True:
             for i, sprite in enumerate(sprites.values()):
+                desc = sprites[f"desc_{str(i)}"]
                 if i != active_idx:
                     sprite.visible = False
+                    desc.visible = False
                 else:
                     sprite.visible = True
+                    desc.visible = True
+            print(desc)
             time.sleep(5)
             active_idx += 1
             if active_idx >= len(sprites):
@@ -65,7 +93,10 @@ class RSS:
         out["pubtime"] = get_timestring(entry.published_parsed)
         if "zeit" in self.url:
             soup = BeautifulSoup(entry.description, "html.parser")
-            out["img_url"] = soup.a.img.get("src")
+            if soup.find("a") and soup.find("a").find("img"):
+                out["img_url"] = soup.a.img.get("src")
+            else:
+                out["img_url"] = ""
             if "body" in soup:
                 out["description"] = soup.body.text.strip()
             else:
@@ -74,6 +105,8 @@ class RSS:
         raise NotImplementedError
 
     def load_img_url(self, url):
+        if not url:
+            return ""
         if url in self.files:
             return self.files[url]
         tmp = self.tmp_fname

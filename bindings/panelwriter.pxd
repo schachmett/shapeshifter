@@ -94,3 +94,8 @@ cdef extern from "led-loop.h" namespace "led_loop":
         AnimationLoop(RGBMatrix*, CanvasObjectList*, LoopOptions*) except +
         void startLoop()
         void endLoop()
+
+cdef class PyAnimationLoop:
+    cdef AnimationLoop* c_sal
+    cdef PyRGBPanel rgb
+    cdef CanvasObjectList* c_sprl

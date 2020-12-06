@@ -260,6 +260,7 @@ void Sprite::draw(rgb_matrix::FrameCanvas* canvas) const {
         if (x > canvas->width())  x -= canvas->width();
         if (y > canvas->height()) y -= canvas->height();
       }
+      fprintf(stderr, "%d\n", p.red);
       canvas->SetPixel(x, y, p.red, p.green, p.blue);
     }
   }
@@ -280,14 +281,17 @@ void Sprite::loadMatrix(const std::string filename, double resize_factor) {
 
 
 
-Text::Text() : CanvasObject(), font(), color(255, 255, 255),
+Text::Text() : CanvasObject(), color(255, 255, 255),
                fontfilename(""), text(""), kerning(0) { }
 Text::Text(const std::string fontfilename, const std::string content,
            const int kerning) {
+  this->font = new rgb_matrix::Font;
   this->setSource(fontfilename, kerning);
   this->setText(content);
 }
-Text::~Text() { }
+Text::~Text() {
+  // delete this->font;   // Leads to a double free() ??
+}
 
 void Text::setSource(const std::string fontfilename, const int kerning) {
   this->loadFont(fontfilename);
@@ -312,15 +316,15 @@ const int& Text::getKerning() const {
   return this->kerning;
 }
 void Text::draw(rgb_matrix::FrameCanvas* canvas) const {
-  rgb_matrix::DrawText(canvas, this->font, this->position.x,
-                       this->position.y + this->font.baseline(),
+  rgb_matrix::DrawText(canvas, *this->font, this->position.x,
+                       this->position.y + this->font->baseline(),
                        this->color, NULL, this->text.c_str(),
                        this->kerning);
 }
 
 // Other non-interface methods
 void Text::loadFont(const std::string fontfilename) {
-  if (!this->font.LoadFont(fontfilename.c_str())) {
+  if (!this->font->LoadFont(fontfilename.c_str())) {
     fprintf(stderr, "Couldn't load font '%s'\n", fontfilename.c_str());
     return;
   }
