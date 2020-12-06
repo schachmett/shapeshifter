@@ -36,43 +36,9 @@ cdef class PyCanvasObjectList:
         if self.c_sprl.find(pystr_to_chars(key)) != self.c_sprl.end():
             print("overwriting")
         cv_obj.ID = key
-        cdef CanvasObject* c_cvo = cv_obj._wrapped_CVO()
+        cdef CanvasObject* c_cvo = cv_obj._cvo()
         self.c_sprl[pystr_to_chars(key)] = c_cvo
-        # cdef Sprite c_spr = cv_obj._wrapped;
-        # cdef Text c_txt;
-        # if isinstance(cv_obj, PySprite):
-        #     c_spr = cv_obj._wrapped()
-        #     c_spr.setID(pystr_to_chars(key))
-        #     self.c_sprl[pystr_to_chars(key)] = &c_spr
-        # elif isinstance(cv_obj, PyText):
-        #     c_txt = cv_obj._wrapped()
-        #     c_txt.setID(pystr_to_chars(key))
-        #     self.c_sprl[pystr_to_chars(key)] = &c_txt
-        # else:
-        #     raise NotImplementedError
         self.py_sprites[key] = cv_obj
-        # cdef CanvasObject c_cvo = cv_obj._wrapped_CVO()
-        # if c_cvo.getID() != pystr_to_chars(key):
-        #     c_cvo.setID(pystr_to_chars(key))
-        # self.c_sprl[pystr_to_chars(key)] = &c_cvo
-        # self.py_sprites[key] = cv_obj
-
-        # if isinstance(cv_obj, PySprite):
-        #     cdef PySprite py_sprite = _PyCVO_to_PySprite(cv_obj)
-        #     if py_sprite.c_spr.getID() != pystr_to_chars(key):
-        #         py_sprite.c_spr.setID(pystr_to_chars(key))
-        #         # print(f"Set ID {cstr_to_pystr(sprite.c_spr.getID())} to {key}")
-        #     # cdef Sprite* c_spr = new Sprite(_str_to_chars(sprite.fname))
-        #     self.c_sprl[pystr_to_chars(key)] = py_sprite.c_spr
-        #     self.py_sprites[key] = py_sprite
-        # elif isinstance(cv_obj, PyText):
-        #     cdef PyText py_text = _PyCVO_to_PySprite(cv_obj)
-        #     if py_text.c_txt.getID() != pystr_to_chars(key):
-        #         py_text.c_txt.setID(pystr_to_chars(key))
-        #     self.c_sprl[pystr_to_chars(key)] = py_text.c_txt
-        #     self.py_sprites[key] = py_text
-        # else:
-        #     raise NotImplementedError
 
     def __delitem__(self, str key):
         raise NotImplementedError
@@ -91,6 +57,11 @@ cdef class PyCanvasObjectList:
 
 
 cdef class PyCanvasObject:
+    # cdef CanvasObject* c_cvo
+    # cdef bool _ptr_owner
+    # cdef bool _is_initialized
+    # cdef CanvasObject* _cvo(self)
+
     def __cinit__(self, *args, **kwargs):
         self._is_initialized = False
         self._ptr_owner = True
@@ -102,21 +73,65 @@ cdef class PyCanvasObject:
         if self._ptr_owner:
             del self.c_cvo
 
-    cdef CanvasObject* _wrapped_CVO(self):
+    cdef CanvasObject* _cvo(self):
         return self.c_cvo
+
+    def do_step(self):
+        self._cvo().doStep()
+
+    property ID:
+        def __get__(self): return self._cvo().getID().decode("UTF-8")
+        def __set__(self, str value): self._cvo().setID(pystr_to_chars(value))
+
+    property fname:
+        def __get__(self): return self._cvo().getSource()
+        def __set__(self, str value): self._cvo().setSource(value)
+
+    property visible:
+        def __get__(self): return self._cvo().getVisible()
+        def __set__(self, bool value): self._cvo().setVisible(value)
+
+    property width:
+        def __get__(self): return self._cvo().getWidth()
+
+    property height:
+        def __get__(self): return self._cvo().getHeight()
 
     property position:
         def __get__(self):
-            p = deref(self._wrapped_CVO()).getPosition()
+            p = self._cvo().getPosition()
             return p.x, p.y
         def __set__(self, (double, double) value):
             cdef Point p
             p.x, p.y = value[0], value[1]
-            self._wrapped_CVO().setPosition(p)
+            self._cvo().setPosition(p)
+
+    property direction:
+        def __get__(self): return self._cvo().getDirection()
+        def __set__(self, double value): self._cvo().setDirection(value)
+
+    property speed:
+        def __get__(self): return self._cvo().getSpeed()
+        def __set__(self, double value): self._cvo().setSpeed(value)
+
+    property edge_behavior:
+        def __get__(self): return self._cvo().getEdgeBehavior()
+        def __set__(self, value): self._cvo().setEdgeBehavior(value)
+
+    def print_status(self):
+        print(
+            f"Sprite '{self.ID}' (visible: {self.visible})\n"
+            f"\tat x={self.position[0]}, y={self.position[1]}\n"
+            f"\twith speed {self.speed}, direction {self.direction}\n"
+            f"\thas EdgeBehavior {self.edge_behavior}"
+        )
 
 
 
 cdef class PySprite(PyCanvasObject):
+    # cdef Sprite* c_spr
+    # cdef PySprite from_ptr(Sprite*, bool owner=*)
+
     def __cinit__(self, str fname):
         if fname == "":
             self._is_initialized = False
@@ -132,10 +147,7 @@ cdef class PySprite(PyCanvasObject):
         if self._ptr_owner:
             del self.c_spr
 
-    cdef Sprite* _wrapped(self):
-        return self.c_spr
-
-    cdef CanvasObject* _wrapped_CVO(self):
+    cdef CanvasObject* _cvo(self):
         return self.c_spr
 
     @staticmethod
@@ -151,65 +163,21 @@ cdef class PySprite(PyCanvasObject):
         py_sprite._is_initialized = True
         return py_sprite
 
-    def do_step(self):
-        self._wrapped().doStep()
-
-    property ID:
-        def __get__(self): return self._wrapped().getID().decode("UTF-8")
-        def __set__(self, str value): self._wrapped().setID(pystr_to_chars(value))
-
-    property fname:
-        def __get__(self): return self._wrapped().getSource()
-        def __set__(self, str value): self._wrapped().setSource(value)
-
-    property visible:
-        def __get__(self): return self._wrapped().getVisible()
-        def __set__(self, bool value): self._wrapped().setVisible(value)
-
     property width:
-        def __get__(self): return self._wrapped().getWidth()
-        def __set__(self, int value): self._wrapped().setWidth(value)
+        def __set__(self, int value): self.c_spr.setWidth(value)
 
     property height:
-        def __get__(self): return self._wrapped().getHeight()
-        def __set__(self, int value): self._wrapped().setHeight(value)
-
-    # property position:
-    #     def __get__(self):
-    #         p = self._wrapped().getPosition()
-    #         return p.x, p.y
-    #     def __set__(self, (double, double) value):
-    #         cdef Point p
-    #         p.x, p.y = value[0], value[1]
-    #         self.c_spr.setPosition(p)
-    #         # self._wrapped().setPosition(p)
-
-    property direction:
-        def __get__(self): return self._wrapped().getDirection()
-        def __set__(self, double value): self._wrapped().setDirection(value)
-
-    property speed:
-        def __get__(self): return self._wrapped().getSpeed()
-        def __set__(self, double value): self._wrapped().setSpeed(value)
-
-    property edge_behavior:
-        def __get__(self): return self._wrapped().getEdgeBehavior()
-        def __set__(self, value): self._wrapped().setEdgeBehavior(value)
+        def __set__(self, int value): self.c_spr.setHeight(value)
 
     def color(self, int x, int y):
-        px = self._wrapped().getPixel(x, y)
+        px = self.c_spr.getPixel(x, y)
         return px.red, px.green, px.blue
-
-    def print_status(self):
-        print(
-            f"Sprite '{self.ID}' (visible: {self.visible})\n"
-            f"\tat x={self.position[0]}, y={self.position[1]}\n"
-            f"\twith speed {self.speed}, direction {self.direction}\n"
-            f"\thas EdgeBehavior {self.edge_behavior}"
-        )
 
 
 cdef class PyText(PyCanvasObject):
+    # cdef Text* c_txt
+    # cdef PyText from_ptr(Text*, bool owner=*)
+
     def __cinit__(self, str text):
         if text == "":
             self._is_initialized = False
@@ -226,10 +194,7 @@ cdef class PyText(PyCanvasObject):
         if self._ptr_owner:
             del self.c_txt
 
-    cdef Text _wrapped(self):
-        return deref(self.c_txt)
-
-    cdef CanvasObject* _wrapped_CVO(self):
+    cdef CanvasObject* _cvo(self):
         return self.c_txt
 
     @staticmethod
@@ -244,55 +209,3 @@ cdef class PyText(PyCanvasObject):
         py_text._is_initialized = True
         py_text._ptr_owner = owner
         return py_text
-
-    def do_step(self):
-        self._wrapped().doStep()
-
-    property ID:
-        def __get__(self): return self._wrapped().getID().decode("UTF-8")
-        def __set__(self, str value): self._wrapped().setID(pystr_to_chars(value))
-
-    property fname:
-        def __get__(self): return self._wrapped().getSource()
-        def __set__(self, str value): self._wrapped().setSource(value)
-
-    property visible:
-        def __get__(self): return self._wrapped().getVisible()
-        def __set__(self, bool value): self._wrapped().setVisible(value)
-
-    property width:
-        def __get__(self): return self._wrapped().getWidth()
-        # def __set__(self, int value): self._wrapped().setWidth(value)
-
-    property height:
-        def __get__(self): return self._wrapped().getHeight()
-        # def __set__(self, int value): self._wrapped().setHeight(value)
-
-    # property position:
-    #     def __get__(self):
-    #         p = self._wrapped().getPosition()
-    #         return p.x, p.y
-    #     def __set__(self, (double, double) value):
-    #         cdef Point p
-    #         p.x, p.y = value[0], value[1]
-    #         self._wrapped().setPosition(p)
-
-    property direction:
-        def __get__(self): return self._wrapped().getDirection()
-        def __set__(self, double value): self._wrapped().setDirection(value)
-
-    property speed:
-        def __get__(self): return self._wrapped().getSpeed()
-        def __set__(self, double value): self._wrapped().setSpeed(value)
-
-    property edge_behavior:
-        def __get__(self): return self._wrapped().getEdgeBehavior()
-        def __set__(self, value): self._wrapped().setEdgeBehavior(value)
-
-    def print_status(self):
-        print(
-            f"Sprite '{self.ID}' (visible: {self.visible})\n"
-            f"\tat x={self.position[0]}, y={self.position[1]}\n"
-            f"\twith speed {self.speed}, direction {self.direction}\n"
-            f"\thas EdgeBehavior {self.edge_behavior}"
-        )

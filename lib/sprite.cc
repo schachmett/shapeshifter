@@ -290,7 +290,6 @@ Text::Text() : CanvasObject::CanvasObject(), color(255, 255, 255),
                fontfilename(""), text(""), kerning(0) { }
 Text::Text(const std::string fontfilename, const std::string content,
            const int kerning) : Text() {
-  fprintf(stderr, "%d\n", this->color.r);
   this->font = new rgb_matrix::Font;
   this->setSource(fontfilename);
   this->setKerning(kerning);
