@@ -3,8 +3,10 @@
 # cython: language_level=3
 
 from libcpp cimport bool
+from libcpp.typeinfo cimport type_info
 from cython.operator cimport dereference as deref
 from cython.operator cimport address
+from cython.operator cimport typeid
 
 # from .sprite cimport Point, Sprite, CanvasObjectList, EdgeBehavior
 from .utility cimport pystr_to_chars, cstr_to_pystr
@@ -16,21 +18,34 @@ from .magick cimport InitializeMagick
 # (aka shapeshifter.so)
 InitializeMagick(NULL)
 
+# cdef const type_info* info_sprite = &typeid(Sprite)
+# cdef const type_info* info_text = &typeid(Text)
 
-cdef class PyCanvasObjectList:
+
+cdef class PyCanvasObjectList():
     # cdef CanvasObjectList c_sprl
     # cdef py_sprites
 
     def __cinit__(self, **dict_of_pysprites):
         self.py_sprites = {}
 
-    def __init__(self, **dict_of_pysprites):
-        for key, py_sprite in dict_of_pysprites.items():
-            self.__setitem__(key, py_sprite)
+    # def __init__(self, **dict_of_pysprites):
+    #     for key, py_sprite in dict_of_pysprites.items():
+    #         self.__setitem__(key, py_sprite)
 
     def __getitem__(self, str key):
-        py_sprite = self.py_sprites[key]
-        return py_sprite
+        it = self.c_sprl.find(pystr_to_chars(key))
+        if it == self.c_sprl.end():
+            raise KeyError
+        cdef CanvasObject* c_cvo = deref(it).second
+        if typeid(deref(c_cvo)) == typeid(Text):
+            return PyText.from_ptr(<Text*>c_cvo)
+        if typeid(deref(c_cvo)) == typeid(Sprite):
+            return PySprite.from_ptr(<Sprite*>c_cvo)
+        else:
+            raise TypeError
+
+        # return self.py_sprites.__getitem__(key)
 
     def __setitem__(self, str key, PyCanvasObject cv_obj):
         if self.c_sprl.find(pystr_to_chars(key)) != self.c_sprl.end():
@@ -38,22 +53,44 @@ cdef class PyCanvasObjectList:
         cv_obj.ID = key
         cdef CanvasObject* c_cvo = cv_obj._cvo()
         self.c_sprl[pystr_to_chars(key)] = c_cvo
-        self.py_sprites[key] = cv_obj
+
+        self.py_sprites.__setitem__(key, cv_obj)
 
     def __delitem__(self, str key):
-        raise NotImplementedError
+        it = self.c_sprl.find(pystr_to_chars(key))
+        if it == self.c_sprl.end():
+            raise KeyError
+        else:
+            self.c_sprl.erase(it)
+
+        self.py_sprites.__delitem__(key)
 
     def __iter__(self):
-        return iter(self.py_sprites)
+        return self.py_sprites.__iter__()
 
-    def values(self):
-        return self.py_sprites.values()
+    def __len__(self):
+        return self.py_sprites.__len__()
+
+    def __contains__(self, key):
+        return key in self.py_sprites
 
     def keys(self):
         return self.py_sprites.keys()
 
-    def __len__(self):
-        return len(self.py_sprites)
+    def values(self):
+        return self.py_sprites.values()
+
+    def items(self):
+        return self.py_sprites.items()
+
+    def get(self, key, *args, **kwargs):
+        return self.py_sprites.get(key,  *args, **kwargs)
+
+    # def values(self):
+    #     return self.py_sprites.values()
+    #
+    # def keys(self):
+    #     return self.py_sprites.keys()
 
 
 cdef class PyCanvasObject:

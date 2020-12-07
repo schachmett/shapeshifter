@@ -20,28 +20,28 @@ URL = "http://newsfeed.zeit.de/index"
 def main():
     rss = RSS(URL)
     sprites = PyCanvasObjectList()
-    sprite = PySprite("sprites/dorie.png")
-    sprite.position = 20, 20
-    sprite.speed = 0.5
-    sprite.visible = True
-    sprites["dorie"] = sprite
-    text = PyText("moin")
-    text.position = 10, 10
-    text.visible = True
-    sprites["moin"] = text
-
-
-    animation = PyAnimationLoop(sprites, frame_time_ms=20)
-
-    animation.start()
-    try:
-        while True:
-            time.sleep(5)
-    except KeyboardInterrupt:
-        print("User interrupt")
-    finally:
-        animation.end()
-    return
+    # sprite = PySprite("sprites/dorie.png")
+    # sprite.position = 20, 20
+    # sprite.speed = 0.5
+    # sprite.visible = True
+    # sprites["dorie"] = sprite
+    # text = PyText("moin")
+    # text.position = 10, 10
+    # text.visible = True
+    # sprites["moin"] = text
+    #
+    #
+    # animation = PyAnimationLoop(sprites, frame_time_ms=20)
+    #
+    # animation.start()
+    # try:
+    #     while True:
+    #         time.sleep(5)
+    # except KeyboardInterrupt:
+    #     print("User interrupt")
+    # finally:
+    #     animation.end()
+    # return
 
     for i in range(len(rss.feed.entries)):
         entry_dict = rss.parse_entry(i)
