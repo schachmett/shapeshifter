@@ -58,18 +58,18 @@ void AnimationLoop::startLoop() {
   this->is_running = true;
   this->animation_thread = std::thread(&AnimationLoop::animation_loop, this);
 }
+void AnimationLoop::endLoop() {
+  this->is_running = false;
+  if(this->animation_thread.joinable()) {
+    this->animation_thread.join();
+  }
+}
 const std::thread& AnimationLoop::getThread() const {
   return this->animation_thread;
 }
 void AnimationLoop::animation_loop() {
   while (this->is_running) {
     this->doFrame();
-  }
-}
-void AnimationLoop::endLoop() {
-  this->is_running = false;
-  if(this->animation_thread.joinable()) {
-    this->animation_thread.join();
   }
 }
 

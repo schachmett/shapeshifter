@@ -14,12 +14,7 @@ from cython.operator cimport dereference as deref
 from libcpp cimport bool
 from libc.stdint cimport uint8_t, uint32_t, uintptr_t
 
-from .sprite cimport PyCanvasObjectList
-# These are automatically imported from $0.pxd
-# from .loop cimport (
-#     AnimationLoop, LoopOptions,
-#     Options, RuntimeOptions, RGBMatrix, FrameCanvas
-# )
+from .sprite cimport PyCanvasObjectListBase
 
 
 from .utility cimport pystr_to_chars, cstr_to_pystr
@@ -203,25 +198,25 @@ cdef class PanelOptions:
 
 
 cdef class PyAnimationLoop:
-    def __cinit__(self, PyCanvasObjectList sprites, **options):
+    def __cinit__(self, PyCanvasObjectListBase sprites, **options):
         cdef LoopOptions cl_options = LoopOptions()
         if "frame_time_ms" in options:
             cl_options.frame_time_ms = options.pop("frame_time_ms")
         self.rgb = PyRGBPanel(**options)
-        self.c_sprl = &sprites.c_sprl
-        self.c_sal = new AnimationLoop(
+        self.c_cvos = &sprites.c_cvos
+        self.c_al = new AnimationLoop(
             self.rgb.__matrix,
-            self.c_sprl,
+            self.c_cvos,
             &cl_options
         )
 
     def __dealloc__(self):
-        del self.c_sal
+        del self.c_al
 
     def start(self):
         print("Starting Animation Loop")
-        deref(self.c_sal).startLoop()
+        deref(self.c_al).startLoop()
 
     def end(self):
         print("Stopping Animation Loop")
-        deref(self.c_sal).endLoop()
+        deref(self.c_al).endLoop()

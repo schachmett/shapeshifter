@@ -28,47 +28,13 @@ PanelSize::PanelSize(size_t x, size_t y) :
   x(x), y(y) { };
 Pixel::Pixel(char red, char green, char blue) :
   red(red), green(green), blue(blue) { };
+bool operator==(const Pixel& lhs, const Pixel& rhs) {
+  if (lhs.red == rhs.red && lhs.green && rhs.green && lhs.blue == rhs.blue) return true;
+  return false;
+}
 Point::Point(double x, double y) :
   x(x), y(y) { };
 
-// Image loading via Magick
-Magick::Image loadImage(const std::string filename, const double resize_factor) {
-  // Magick::Image img;
-  // std::vector<Magick::Image> frames;
-  // try {
-  //   readImages(&frames, filename);
-  // } catch (std::exception& e) {
-  //   if (e.what()) fprintf(stderr, "Magickimage error: %s\n", e.what());
-  // }
-  // if (frames.size() == 0) fprintf(stderr, "No image found.\n");
-  // if (frames.size() > 1) fprintf(stderr, "Discarded additional frames.\n");
-  //
-  // img = frames[0];    // tweak here for gifs!
-  Magick::Image img = Magick::Image(filename);
-  if (resize_factor != 1.0) {
-    const double target_width = (double) img.columns() * resize_factor;
-    const double target_height = (double) img.rows() * resize_factor;
-    img.scale(Magick::Geometry(target_width, target_height));
-  }
-  return img;
-}
-PixelMatrix loadMatrix(const std::string filename, const double resize_factor) {
-  Magick::Image img = loadImage(filename, resize_factor);
-  PixelMatrix mat;
-  for (size_t img_y = 0; img_y < img.rows(); ++img_y) {
-    PixelColumn column;
-    for (size_t img_x = 0; img_x < img.columns(); ++img_x) {
-      const Magick::Color &c = img.pixelColor(img_x, img_y);
-      char red = (char) ScaleQuantumToChar(c.redQuantum());
-      char green = (char) ScaleQuantumToChar(c.greenQuantum());
-      char blue = (char) ScaleQuantumToChar(c.blueQuantum());
-      Pixel* pixel = new Pixel({red, green, blue});
-      column.push_back(*pixel);
-    }
-    mat.push_back(column);
-  }
-  return mat;
-}
 
 
 CanvasObject::CanvasObject() :
@@ -77,6 +43,9 @@ CanvasObject::CanvasObject() :
     position(0, 0), direction(0), speed(0),
     position_goal(nan(""), nan("")), goal_steps(-1) {
   this->id = generateID();
+}
+CanvasObject::CanvasObject(const std::string source) : CanvasObject() {
+  this->setSource(source);
 }
 CanvasObject::~CanvasObject() { }
 
@@ -197,9 +166,47 @@ Point CanvasObject::wrap_edge(double x, double y) {
 
 
 
+// Image loading via Magick
+Magick::Image loadImage(const std::string filename, const double resize_factor) {
+  // Magick::Image img;
+  // std::vector<Magick::Image> frames;
+  // try {
+  //   readImages(&frames, filename);
+  // } catch (std::exception& e) {
+  //   if (e.what()) fprintf(stderr, "Magickimage error: %s\n", e.what());
+  // }
+  // if (frames.size() == 0) fprintf(stderr, "No image found.\n");
+  // if (frames.size() > 1) fprintf(stderr, "Discarded additional frames.\n");
+  //
+  // img = frames[0];    // tweak here for gifs!
+  Magick::Image img = Magick::Image(filename);
+  if (resize_factor != 1.0) {
+    const double target_width = (double) img.columns() * resize_factor;
+    const double target_height = (double) img.rows() * resize_factor;
+    img.scale(Magick::Geometry(target_width, target_height));
+  }
+  return img;
+}
+PixelMatrix loadMatrix(const std::string filename, const double resize_factor) {
+  Magick::Image img = loadImage(filename, resize_factor);
+  PixelMatrix mat;
+  for (size_t img_y = 0; img_y < img.rows(); ++img_y) {
+    PixelColumn column;
+    for (size_t img_x = 0; img_x < img.columns(); ++img_x) {
+      const Magick::Color &c = img.pixelColor(img_x, img_y);
+      char red = (char) ScaleQuantumToChar(c.redQuantum());
+      char green = (char) ScaleQuantumToChar(c.greenQuantum());
+      char blue = (char) ScaleQuantumToChar(c.blueQuantum());
+      Pixel pixel = Pixel({red, green, blue});
+      column.push_back(pixel);
+    }
+    mat.push_back(column);
+  }
+  return mat;
+}
 // Sprite constructor and Image loading / initialization
-Sprite::Sprite() : CanvasObject::CanvasObject(), matrix(), resize_factor(1.0) { }
-Sprite::Sprite(const std::string filename, const double resize_factor) {
+Sprite::Sprite() : CanvasObject::CanvasObject(), img(), matrix(), resize_factor(1.0) { }
+Sprite::Sprite(const std::string filename, const double resize_factor) : Sprite() {
   this->loadMatrix(filename, resize_factor);
 }
 Sprite::~Sprite() { }
@@ -227,23 +234,23 @@ void Sprite::setHeight(const int height) {
 
 // Non-interface methods
 // Get drawing data
-void Sprite::setPixel(const ColoredPixel* cpixel) {
-  this->setPixel(cpixel->point.x, cpixel->point.y, &cpixel->pixel);
+void Sprite::setPixel(const ColoredPixel cpixel) {
+  this->setPixel(cpixel.point.x, cpixel.point.y, cpixel.pixel);
 }
-void Sprite::setPixel(const Point* point, const Pixel* pixel) {
-  this->setPixel(point->x, point->y, pixel);
+void Sprite::setPixel(const Point point, const Pixel pixel) {
+  this->setPixel(point.x, point.y, pixel);
 }
 void Sprite::setPixel(const int x, const int y,
                       const char r, const char g, const char b) {
-  Pixel* pixel = new Pixel(r, g, b);
+  Pixel pixel = Pixel(r, g, b);
   this->setPixel(x, y, pixel);
-  delete pixel;   // is this correct?
+  // delete pixel;   // is this correct?
 }
-void Sprite::setPixel(const int x, const int y, const Pixel* pixel) {
-  this->matrix[y][x] = *pixel;
+void Sprite::setPixel(const int x, const int y, const Pixel pixel) {
+  this->matrix[y][x] = pixel;
 }
+static Pixel EMPTY_PIXEL = {0, 0, 0};
 const Pixel& Sprite::getPixel(const int x, const int y) const {
-  static Pixel EMPTY_PIXEL = {0, 0, 0};
   if (!this->visible) return EMPTY_PIXEL;
   if (x < 0) return EMPTY_PIXEL;
   if (y < 0) return EMPTY_PIXEL;
@@ -251,6 +258,22 @@ const Pixel& Sprite::getPixel(const int x, const int y) const {
   if ((size_t) y > this->height) return EMPTY_PIXEL;
   const Pixel& pixel = this->matrix[y][x];
   return pixel;
+}
+const Points Sprite::getOverlap(const Sprite* other) const {
+  Points points;
+  if (!this->getVisible() or !other->getVisible()) return points;
+  double dx = this->getPosition().x - other->getPosition().x;
+  double dy = this->getPosition().y - other->getPosition().y;
+  for (size_t img_y = 0; img_y < this->getHeight(); ++img_y) {
+    for (size_t img_x = 0; img_x < this->getWidth(); ++img_x) {
+      const Pixel px = this->getPixel(img_x, img_y);
+      const Pixel px_o = other-> getPixel(img_x - dx, img_y - dy);
+      if (px == EMPTY_PIXEL and px_o == EMPTY_PIXEL) continue;
+      Point p = Point(img_x, img_y);
+      points.push_back(p);
+    }
+  }
+  return points;
 }
 void Sprite::draw(rgb_matrix::FrameCanvas* canvas) const {
   if (!this->getVisible()) return;
@@ -321,6 +344,7 @@ const int& Text::getKerning() const {
   return this->kerning;
 }
 void Text::draw(rgb_matrix::FrameCanvas* canvas) const {
+  if (this->fontfilename.empty()) { return; }
   rgb_matrix::DrawText(canvas, *this->font, this->position.x,
                        this->position.y + this->font->baseline(),
                        this->color, NULL, this->text.c_str(),

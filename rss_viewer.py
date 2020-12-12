@@ -113,14 +113,17 @@ class RSS:
             return ""
         if url in self.files:
             return self.files[url]
-        tmp = self.tmp_fname
-        self.tmp_fname += 1
-        # ext = url.split(".")[-1]
-        local_fname = f"{self.cache}{tmp}"#".{ext}"
-        with open(local_fname, "wb") as img_file:
-            img_file.write(requests.get(url).content)
-        self.files[url] = local_fname
-        return local_fname
+        try:
+            tmp = self.tmp_fname
+            self.tmp_fname += 1
+            # ext = url.split(".")[-1]
+            local_fname = f"{self.cache}{tmp}"#".{ext}"
+            with open(local_fname, "wb") as img_file:
+                img_file.write(requests.get(url).content)
+            self.files[url] = local_fname
+            return local_fname
+        except AttributeError:
+            return ""
 
 
 def get_timestring(time_struct):

@@ -44,6 +44,7 @@ namespace Sprites {
   typedef std::vector<Pixel> PixelColumn;
   typedef std::vector<std::vector<Pixel>> PixelMatrix;
   typedef std::vector<ColoredPixel> ColoredPixelList;
+  typedef std::vector<Point> Points;
 
   // Magick::Image loadImage(const char* filename, const double resize_factor = 1);
   // PixelMatrix loadMatrix(const char* filename, const double resize_factor = 1);
@@ -54,6 +55,7 @@ namespace Sprites {
   class CanvasObject {
   public:
     CanvasObject();
+    CanvasObject(const std::string source);
     virtual ~CanvasObject();
 
     virtual void setID(CanvasObjectID);
@@ -111,6 +113,7 @@ namespace Sprites {
     int goal_steps;
   };
 
+
   class Sprite : public CanvasObject {
   public:
     Sprite();
@@ -126,10 +129,11 @@ namespace Sprites {
 
     void setPixel(const int x, const int y,
                   const char r, const char g, const char b);
-    void setPixel(const ColoredPixel* cpixel);
-    void setPixel(const Point* point, const Pixel* pixel);
-    void setPixel(const int x, const int y, const Pixel* pixel);
+    void setPixel(const ColoredPixel cpixel);
+    void setPixel(const Point point, const Pixel pixel);
+    void setPixel(const int x, const int y, const Pixel pixel);
     const Pixel& getPixel(const int x, const int y) const;
+    const Points getOverlap(const Sprite*) const;
     virtual void draw(rgb_matrix::FrameCanvas* canvas) const;
 
   protected:
@@ -137,9 +141,11 @@ namespace Sprites {
     void loadMatrix(const std::string filename, double resize_factor = 1.0);
 
     std::string filename;
+    Magick::Image img;
     PixelMatrix matrix;
     double resize_factor;
   };
+
 
   class Text : public CanvasObject {
   public:
@@ -169,7 +175,8 @@ namespace Sprites {
     int kerning;
   };
 
-  typedef std::map<CanvasObjectID, CanvasObject*> CanvasObjectList;
+  typedef std::unordered_map<CanvasObjectID, CanvasObject*> CanvasObjectList;
+  typedef CanvasObjectList::iterator CanvasObjectListIterator;
 
 } // end namespace Sprites
 

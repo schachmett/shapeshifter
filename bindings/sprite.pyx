@@ -5,10 +5,10 @@
 from libcpp cimport bool
 from libcpp.typeinfo cimport type_info
 from cython.operator cimport dereference as deref
-from cython.operator cimport address
-from cython.operator cimport typeid
+from cython.operator cimport address, typeid, postincrement
 
-# from .sprite cimport Point, Sprite, CanvasObjectList, EdgeBehavior
+import collections.abc
+
 from .utility cimport pystr_to_chars, cstr_to_pystr
 from .magick cimport InitializeMagick
 
@@ -18,24 +18,19 @@ from .magick cimport InitializeMagick
 # (aka shapeshifter.so)
 InitializeMagick(NULL)
 
-# cdef const type_info* info_sprite = &typeid(Sprite)
-# cdef const type_info* info_text = &typeid(Text)
 
-
-cdef class PyCanvasObjectList():
-    # cdef CanvasObjectList c_sprl
+cdef class PyCanvasObjectListBase():
+    # cdef CanvasObjectList c_cvos
     # cdef py_sprites
+    # cdef cvo2py(self, CanvasObject*)
+    # cdef it2py(self, CanvasObjectListIterator)
 
     def __cinit__(self, **dict_of_pysprites):
         self.py_sprites = {}
 
-    # def __init__(self, **dict_of_pysprites):
-    #     for key, py_sprite in dict_of_pysprites.items():
-    #         self.__setitem__(key, py_sprite)
-
     def __getitem__(self, str key):
-        it = self.c_sprl.find(pystr_to_chars(key))
-        if it == self.c_sprl.end():
+        it = self.c_cvos.find(pystr_to_chars(key))
+        if it == self.c_cvos.end():
             raise KeyError
         cdef CanvasObject* c_cvo = deref(it).second
         if typeid(deref(c_cvo)) == typeid(Text):
@@ -45,66 +40,64 @@ cdef class PyCanvasObjectList():
         else:
             raise TypeError
 
-        # return self.py_sprites.__getitem__(key)
-
     def __setitem__(self, str key, PyCanvasObject cv_obj):
-        if self.c_sprl.find(pystr_to_chars(key)) != self.c_sprl.end():
+        if self.c_cvos.find(pystr_to_chars(key)) != self.c_cvos.end():
             print("overwriting")
         cv_obj.ID = key
         cdef CanvasObject* c_cvo = cv_obj._cvo()
-        self.c_sprl[pystr_to_chars(key)] = c_cvo
-
-        self.py_sprites.__setitem__(key, cv_obj)
+        self.c_cvos[pystr_to_chars(key)] = c_cvo
+        # need to keep a reference to the cvo (easiest to do this inside the py_cvo)
+        self.py_sprites[key] = cv_obj
 
     def __delitem__(self, str key):
-        it = self.c_sprl.find(pystr_to_chars(key))
-        if it == self.c_sprl.end():
+        it = self.c_cvos.find(pystr_to_chars(key))
+        if it == self.c_cvos.end():
             raise KeyError
         else:
-            self.c_sprl.erase(it)
+            self.c_cvos.erase(it)
+        self.py_sprite.pop(key)
 
-        self.py_sprites.__delitem__(key)
+    cdef cvo2py(self, CanvasObject* c_cvo):
+        if typeid(deref(c_cvo)) == typeid(Text):
+            return PyText.from_ptr(<Text*>c_cvo)
+        if typeid(deref(c_cvo)) == typeid(Sprite):
+            return PySprite.from_ptr(<Sprite*>c_cvo)
+        else:
+            raise TypeError
+
+    cdef it2py(self, CanvasObjectListIterator it):
+        cdef CanvasObject* c_cvo = deref(it).second
+        return self.cvo2py(c_cvo)
 
     def __iter__(self):
-        return self.py_sprites.__iter__()
+        cdef CanvasObjectListIterator it = self.c_cvos.begin()
+        while it != self.c_cvos.end():
+            key = cstr_to_pystr(deref(it).first)
+            yield key
+            postincrement(it)
+        return
 
     def __len__(self):
-        return self.py_sprites.__len__()
+        return self.c_cvos.size()
 
-    def __contains__(self, key):
-        return key in self.py_sprites
 
-    def keys(self):
-        return self.py_sprites.keys()
-
-    def values(self):
-        return self.py_sprites.values()
-
-    def items(self):
-        return self.py_sprites.items()
-
-    def get(self, key, *args, **kwargs):
-        return self.py_sprites.get(key,  *args, **kwargs)
-
-    # def values(self):
-    #     return self.py_sprites.values()
-    #
-    # def keys(self):
-    #     return self.py_sprites.keys()
+class PyCanvasObjectList(PyCanvasObjectListBase, collections.abc.MutableMapping):
+    pass
 
 
 cdef class PyCanvasObject:
     # cdef CanvasObject* c_cvo
+    # cdef CanvasObject* _cvo(self)
     # cdef bool _ptr_owner
     # cdef bool _is_initialized
-    # cdef CanvasObject* _cvo(self)
 
     def __cinit__(self, *args, **kwargs):
         self._is_initialized = False
         self._ptr_owner = True
 
     def __init__(self, *args, **kwargs):
-        raise NotImplementedError("Should be abstract")
+        if not self._is_initialized:
+            raise RuntimeError("PyCanvasObject improperly initialized")
 
     def __dealloc__(self):
         if self._ptr_owner:
@@ -166,6 +159,9 @@ cdef class PyCanvasObject:
 
 
 cdef class PySprite(PyCanvasObject):
+    """For instantiation via from_ptr, see also:
+    https://cython.readthedocs.io/en/latest/src/userguide/
+    extension_types.html#existing-pointers-instantiation"""
     # cdef Sprite* c_spr
     # cdef PySprite from_ptr(Sprite*, bool owner=*)
 
@@ -177,8 +173,13 @@ cdef class PySprite(PyCanvasObject):
         self._ptr_owner = True
         self.c_spr = new Sprite(pystr_to_chars(fname))
 
-    def __init__(self, *args, **kwargs):
-        pass
+    @staticmethod
+    cdef PySprite from_ptr(Sprite* sprite, bool owner=False):
+        cdef PySprite py_sprite = PySprite.__new__(PySprite, "")
+        py_sprite.c_spr = sprite
+        py_sprite._ptr_owner = owner
+        py_sprite._is_initialized = True
+        return py_sprite
 
     def __dealloc__(self):
         if self._ptr_owner:
@@ -187,24 +188,23 @@ cdef class PySprite(PyCanvasObject):
     cdef CanvasObject* _cvo(self):
         return self.c_spr
 
-    @staticmethod
-    cdef PySprite from_ptr(Sprite* sprite, bool owner=False):
-        """
-        See also:
-        https://cython.readthedocs.io/en/latest/src/userguide/
-        extension_types.html#existing-pointers-instantiation
-        """
-        cdef PySprite py_sprite = PySprite.__new__(PySprite, "")
-        py_sprite.c_spr = sprite
-        py_sprite._ptr_owner = owner
-        py_sprite._is_initialized = True
-        return py_sprite
-
     property width:
         def __set__(self, int value): self.c_spr.setWidth(value)
 
     property height:
         def __set__(self, int value): self.c_spr.setHeight(value)
+
+    # def get_overlap(self, PySprite sprite):
+    #     cdef Sprite* c_spr_other = sprite.c_spr
+    #     cdef Points ps = self.c_spr.getOverlap(c_spr_other)
+    #     p_str = ""
+    #     cdef PointsIterator it = ps.begin()
+    #     i = 0
+    #     while it != ps.end():
+    #         print(i)
+    #         i += 1
+    #         p_str += f"x={deref(it).x}, y={deref(it).y}\n"
+    #     return p_str
 
     def color(self, int x, int y):
         px = self.c_spr.getPixel(x, y)
@@ -224,8 +224,13 @@ cdef class PyText(PyCanvasObject):
         self._is_initialized = True
         self._ptr_owner = True
 
-    def __init__(self, *args, **kwargs):
-        pass
+    @staticmethod
+    cdef PyText from_ptr(Text* text, bool owner=False):
+        cdef PyText py_text = PyText.__new__(PyText, "")
+        py_text.c_txt = text
+        py_text._is_initialized = True
+        py_text._ptr_owner = owner
+        return py_text
 
     def __dealloc__(self):
         if self._ptr_owner:
@@ -233,16 +238,3 @@ cdef class PyText(PyCanvasObject):
 
     cdef CanvasObject* _cvo(self):
         return self.c_txt
-
-    @staticmethod
-    cdef PyText from_ptr(Text* text, bool owner=False):
-        """
-        See also:
-        https://cython.readthedocs.io/en/latest/src/userguide/
-        extension_types.html#existing-pointers-instantiation
-        """
-        cdef PyText py_text = PyText.__new__(PyText, "")
-        py_text.c_txt = text
-        py_text._is_initialized = True
-        py_text._ptr_owner = owner
-        return py_text

@@ -2,7 +2,6 @@
 Bindings for the main loop that runs the panel animations.
 """
 
-# from .panel cimport RGBMatrix
 from .sprite cimport CanvasObjectList
 
 from libcpp cimport bool
@@ -96,6 +95,6 @@ cdef extern from "led-loop.h" namespace "led_loop":
         void endLoop()
 
 cdef class PyAnimationLoop:
-    cdef AnimationLoop* c_sal
+    cdef AnimationLoop* c_al
     cdef PyRGBPanel rgb
-    cdef CanvasObjectList* c_sprl
+    cdef CanvasObjectList* c_cvos

@@ -8,7 +8,8 @@ CYTHON      ?=  cython
 
 
 CFLAGS			=		-Wall -Wextra -Wno-unused-parameter -O3 -g
-CXXFLAGS		=		$(CFLAGS)
+# last parameter see https://stackoverflow.com/questions/48149323/
+CXXFLAGS		=		$(CFLAGS) -std=c++11 -Wno-psabi
 CPPFLAGS 		=		-Iinclude
 # rpi-led-rgb-matrix (https://github.com/hzeller/rpi-rgb-led-matrix)
 RGB_DIR     =   lib/rgbmatrix

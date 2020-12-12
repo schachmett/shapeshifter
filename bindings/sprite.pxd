@@ -4,7 +4,7 @@ Bindings for the sprites.h module.
 
 from libcpp cimport bool
 from libcpp.string cimport string
-from libcpp.map cimport map as cmap
+from libcpp.unordered_map cimport unordered_map
 
 
 cdef extern from "sprite.cc":
@@ -75,27 +75,28 @@ cdef extern from "sprite.h" namespace "Sprites":
         void setKerning(int)
         const int getKerning() const
 
-    ctypedef cmap[CanvasObjectID, CanvasObject*] CanvasObjectList
+    ctypedef unordered_map[CanvasObjectID, CanvasObject*] CanvasObjectList
+    ctypedef unordered_map[CanvasObjectID, CanvasObject*].iterator CanvasObjectListIterator
 
 cdef class PyCanvasObject:
     cdef CanvasObject* c_cvo
+    cdef CanvasObject* _cvo(self)
     cdef bool _ptr_owner
     cdef bool _is_initialized
-    cdef CanvasObject* _cvo(self)
 
 cdef class PySprite(PyCanvasObject):
     cdef Sprite* c_spr
     @staticmethod
     cdef PySprite from_ptr(Sprite*, bool owner=*)
-    # cdef CanvasObject* _cvo(self)
 
 cdef class PyText(PyCanvasObject):
     cdef Text* c_txt
     @staticmethod
     cdef PyText from_ptr(Text*, bool owner=*)
-    # cdef CanvasObject* _cvo(self)
 
 
-cdef class PyCanvasObjectList:
-    cdef CanvasObjectList c_sprl
+cdef class PyCanvasObjectListBase:
+    cdef CanvasObjectList c_cvos
     cdef py_sprites
+    cdef cvo2py(self, CanvasObject*)
+    cdef it2py(self, CanvasObjectListIterator)
