@@ -114,8 +114,8 @@ cdef class PyCanvasObject:
         def __set__(self, str value): self._cvo().setID(pystr_to_chars(value))
 
     property fname:
-        def __get__(self): return self._cvo().getSource()
-        def __set__(self, str value): self._cvo().setSource(value)
+        def __get__(self): return self._cvo().getContent()
+        def __set__(self, str value): self._cvo().setContent(value)
 
     property visible:
         def __get__(self): return self._cvo().getVisible()
@@ -193,6 +193,10 @@ cdef class PySprite(PyCanvasObject):
 
     property height:
         def __set__(self, int value): self.c_spr.setHeight(value)
+
+    property rotation:
+        def __get__(self): return self.c_spr.getRotation()
+        def __set__(self, double value): self.c_spr.setRotation(value)
 
     # def get_overlap(self, PySprite sprite):
     #     cdef Sprite* c_spr_other = sprite.c_spr

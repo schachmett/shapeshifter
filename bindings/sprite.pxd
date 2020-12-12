@@ -4,7 +4,7 @@ Bindings for the sprites.h module.
 
 from libcpp cimport bool
 from libcpp.string cimport string
-from libcpp.unordered_map cimport unordered_map
+from libcpp.map cimport map as cmap
 
 
 cdef extern from "sprite.cc":
@@ -35,11 +35,11 @@ cdef extern from "sprite.h" namespace "Sprites":
 
         void setID(CanvasObjectID)
         const CanvasObjectID getID() const
-        const int getWidth() const
-        const int getHeight() const
+        int getWidth() const
+        int getHeight() const
 
-        void setSource(string)
-        const string getSource() const
+        void setContent(string)
+        const string getContent() const
 
         void doStep()
 
@@ -60,8 +60,12 @@ cdef extern from "sprite.h" namespace "Sprites":
         Sprite(string) except +
         Sprite(string, double) except +
 
+        int getWidth()
         void setWidth(int)
+        int getHeight()
         void setHeight(int)
+        void setRotation(double)
+        const double getRotation() const
 
         const Pixel getPixel(int, int) const
 
@@ -75,8 +79,8 @@ cdef extern from "sprite.h" namespace "Sprites":
         void setKerning(int)
         const int getKerning() const
 
-    ctypedef unordered_map[CanvasObjectID, CanvasObject*] CanvasObjectList
-    ctypedef unordered_map[CanvasObjectID, CanvasObject*].iterator CanvasObjectListIterator
+    ctypedef cmap[CanvasObjectID, CanvasObject*] CanvasObjectList
+    ctypedef cmap[CanvasObjectID, CanvasObject*].iterator CanvasObjectListIterator
 
 cdef class PyCanvasObject:
     cdef CanvasObject* c_cvo

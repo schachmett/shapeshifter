@@ -13,12 +13,13 @@ BLUE        :=  $(shell tput setaf 12)
 define run_and_test
   printf "$(BLUE)$(if $(2),$(2),Compiling) $@$(NORMFONT)...\r";          		\
   $(1) 2> $@.log;                                                           \
+	sed -i '/Not all members given for struct/d' $@.log;											\
   RESULT=$$?;                                                               \
   if [ $$RESULT -ne 0 ]; then                                               \
     printf "%-70b%b" 																												\
 			"$(BLUE)$(if $(2),$(2),Compiling) $@" 																\
 			"$(RED)[ERROR]$(NORMFONT)\n"; 																				\
-  elif [ -s $@.log ]; then                                                  \
+  elif [ -s $@.log ]; then																								  \
     printf "%-70b%b" 																												\
 			"$(BLUE)$(if $(2),$(2),Compiling) $@" 																\
 			"$(YELLOW)[WARNING]$(NORMFONT)\n"; 																		\

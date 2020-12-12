@@ -5,6 +5,7 @@
 
 CYTHONIZE   ?=  cythonize
 CYTHON      ?=  cython
+CYTHONFLAGS = --directive warn.maybe_uninitialized=False
 
 
 CFLAGS			=		-Wall -Wextra -Wno-unused-parameter -O3 -g
@@ -72,7 +73,7 @@ bindings/%.so : build/%.cython.cc
 build/%.cython.cc : bindings/%.pyx
 	@mkdir -p $(@D)
 	@$(call run_and_test \
-			,$(CYTHON) $(CPPFLAGS) -X language_level=3 --cplus -o $@ $^ \
+			,$(CYTHON) $(CYTHONFLAGS) $(CPPFLAGS) -X language_level=3 --cplus -o $@ $^ \
 			,Building)
 
 sync-to-pi :

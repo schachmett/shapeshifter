@@ -30,7 +30,9 @@ def main():
     # print(dir(sprites["one"]))
 
     nemo = PySprite("sprites/nemo.png")
-    nemo.position = 150, 10
+    nemo.position = 130, 5
+    nemo.rotation = 30
+    nemo.height = 40
     dorie = PySprite("sprites/dorie_lr.png")
     dorie.speed = 0.5
 
@@ -61,7 +63,8 @@ def main():
     animation.start()
     try:
         while True:
-            print(dorie.position)
+            # nemo.rotation += 5
+            # print(dorie.position)
             # print(dorie.get_overlap(nemo))
             # for sid, s in sprites.items():
             #     if "dorie" in sid or "nemo" in sid:
